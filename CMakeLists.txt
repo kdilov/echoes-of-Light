@@ -10,22 +10,14 @@ SET(OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/")
 # Ouput all DLLs from all libs into main build folder
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIRECTORY})
 
+SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 #### Add External Dependencies ####
 add_subdirectory("lib/SFML")
 set(SFML_INCS "lib/SFML/include")
 link_directories("${CMAKE_BINARY_DIR}/lib/SFML/lib")
-
-#### Echoes of Light ####
+  
+#### Platformer Game ####
 add_executable(echoes-of-light main.cpp)
-target_include_directories(echoes-of-light PRIVATE ${SFML_INCS})
+target_include_directories(echoes-of-light PRIVATE ${SFML_INCS} include)
 target_link_libraries(echoes-of-light sfml-graphics)
-set_target_properties(echoes-of-light 
-    PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY
-    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$(Configuration)
-)
-add_custom_target(copy_resources ALL COMMAND ${CMAKE_COMMAND} 
-  -E copy_directory
-    "${PROJECT_SOURCE_DIR}/resources"
-    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/resources
-)
-add_dependencies(echoes-of-light copy_resources)

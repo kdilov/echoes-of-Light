@@ -12,3 +12,5 @@ Echoes of Light is a 8-bit adventure maze game. The king has been slain by an in
 The game is being created with C++, SMFL and built with CMake configuration. 
 
 
+Dont forget to 
+git submodule update --init --recursive --jobs 4
