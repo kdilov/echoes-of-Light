@@ -1,5 +1,5 @@
-project(echoes-of-light)
 cmake_minimum_required(VERSION 3.11)
+project(echoes-of-light)
 # Require modern C++
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +18,19 @@ set(SFML_INCS "lib/SFML/include")
 link_directories("${CMAKE_BINARY_DIR}/lib/SFML/lib")
   
 #### Platformer Game ####
-add_executable(echoes-of-light main.cpp)
+set(EOL_SOURCES
+    main.cpp
+    src/components/Component.cpp
+    src/components/TransformComponent.cpp
+    src/components/RenderComponent.cpp
+    src/components/LightComponent.cpp
+    src/components/PlayerComponent.cpp
+    src/components/EnemyComponent.cpp
+    src/components/LightSourceComponent.cpp
+    src/components/PuzzleComponent.cpp
+    src/components/UpgradeComponent.cpp
+)
+
+add_executable(echoes-of-light ${EOL_SOURCES})
 target_include_directories(echoes-of-light PRIVATE ${SFML_INCS} include)
 target_link_libraries(echoes-of-light sfml-graphics)
