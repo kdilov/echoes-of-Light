@@ -34,3 +34,5 @@ set(EOL_SOURCES
 add_executable(echoes-of-light ${EOL_SOURCES})
 target_include_directories(echoes-of-light PRIVATE ${SFML_INCS} include)
 target_link_libraries(echoes-of-light sfml-graphics)
+
+best abalaka
