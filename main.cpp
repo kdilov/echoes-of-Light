@@ -1,5 +1,5 @@
 #include <SFML/Graphics.hpp>
-
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -13,6 +13,13 @@
 #include "components/TransformComponent.h"
 #include "components/UpgradeComponent.h"
 
+#include "components/Map.hpp"
+#include "LevelManager.hpp"
+
+constexpr int TILE_SIZE = 32;
+
+// ===== ENTITY FACTORIES ===== //
+
 struct Entity {
     std::string name;
     std::vector<eol::ComponentPtr> components;
@@ -21,8 +28,7 @@ struct Entity {
 Entity makePlayerEntity() {
     Entity entity;
     entity.name = "Player";
-    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
-        sf::Vector2f{64.f, 64.f}, sf::Vector2f{1.f, 1.f}, 0.f));
+    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(sf::Vector2f{64.f, 64.f}, sf::Vector2f{1.f, 1.f}, 0.f));
     entity.components.emplace_back(std::make_unique<eol::RenderComponent>());
     entity.components.emplace_back(std::make_unique<eol::PlayerComponent>());
     entity.components.emplace_back(std::make_unique<eol::LightComponent>());
@@ -50,63 +56,91 @@ Entity makeEnemyEntity() {
     return entity;
 }
 
+// ===== MAIN GAME ENTRY ===== //
+
 int main() {
+
     sf::RenderWindow window(sf::VideoMode({800, 600}), "Echoes of Light");
 
+    // Create main player and objects
     Entity player = makePlayerEntity();
     Entity beacon = makeLightBeaconEntity();
     Entity enemy = makeEnemyEntity();
 
-    // Simple placeholder interaction between components to avoid unused warnings.
-    if (!player.components.empty()) {
-        player.components.front()->setEnabled(true);
-    }
-    if (!beacon.components.empty()) {
-        beacon.components.front()->setEnabled(true);
-    }
-    if (!enemy.components.empty()) {
-        enemy.components.front()->setEnabled(true);
-    }
+    // Load levels + first map
+    LevelManager levels;
+    levels.loadCurrentLevel();
+    
+    // Scan map objects (exit tile, mirrors, light sources)
+    LevelObjects objects = levels.scanObjects();
 
+    // Convert exit tile to world position once
+    sf::Vector2f exitPos(
+        objects.exitTile.x * TILE_SIZE + TILE_SIZE / 2.0f,
+        objects.exitTile.y * TILE_SIZE + TILE_SIZE / 2.0f
+    );
+
+    std::cout << "Exit Beacon placed at: " << exitPos.x << ", " << exitPos.y << std::endl;
+
+    // MAIN LOOP
     while (window.isOpen()) {
-        while (const auto event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>())
+
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
                 window.close();
         }
+
+        // ===== PLAYER UPDATE (placeholder) ===== //
+        // This should be replaced when your movement system is implemented:
+        auto transform = dynamic_cast<eol::TransformComponent*>(player.components[0].get());
+        sf::Vector2f pos = transform->getPosition();
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) pos.y -= 2;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) pos.y += 2;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) pos.x -= 2;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) pos.x += 2;
+
+        transform->setPosition(pos);
+
+
+        // ===== WIN CONDITION CHECK ===== //
+
+        float dx = pos.x - exitPos.x;
+        float dy = pos.y - exitPos.y;
+        float distanceSquared = (dx * dx + dy * dy);
+
+        if (distanceSquared < (TILE_SIZE * TILE_SIZE * 0.5f)) {
+
+            std::cout << "Level Completed!" << std::endl;
+
+            if (!levels.isFinished()) {
+
+                std::cout << "Loading Next Level..." << std::endl;
+
+                levels.nextLevel();
+                objects = levels.scanObjects();
+
+                exitPos = sf::Vector2f(
+                    objects.exitTile.x * TILE_SIZE + TILE_SIZE / 2.0f,
+                    objects.exitTile.y * TILE_SIZE + TILE_SIZE / 2.0f
+                );
+            }
+            else {
+                std::cout << "GAME COMPLETE — YOU WON!" << std::endl;
+                window.close();
+            }
+        }
+
+
+        // ===== RENDER ===== //
         window.clear();
+
+        // draw full map (later add player + UI + light effects)
+        levels.getMap().draw(window);
+
         window.display();
     }
+
     return 0;
-}
-
-#include "comonents/Map.h"
-
-Map levelMap;
-int main() {
-    levelMap.loadFromFile("resources/levels/past.txt");
-    
-    for (int y = 0; y < levelMap.getHeight(); ++y) {
-        for (int x = 0; x < levelMap.getWidth(); ++x) {
-            char tile = levelMap.getTile(x, y);
-            // Process each tile as needed
-        }
-        std::cout << std::endl;
-    }
-    return 0;
-}
-
-#include "LevelManager.h"
-LevelManager levels;
-levels.loadCurrentLevel();
-
-while (window.isOpen()) {
-    // Game loop logic
-    if (playerReachesLevelEnd()) {
-        levels.nextLevel();
-    } else{
-        std::cout << "All levels completed!" << std::endl;
-        break;
-    }
-    // Rendering and other game logic
-    draw(levels.getMap());
 }
