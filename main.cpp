@@ -20,8 +20,9 @@
 #include "components/LightSourceComponent.h"
 #include "components/PuzzleComponent.h"
 
-#include "components/Map.hpp"
-#include "LevelManager.hpp"
+ // TODO: Uncomment when LevelManager is fully implemented
+ // #include "LevelManager.hpp"
+ // #include "components/Map.hpp"
 
 #include "Systems.h"
 
@@ -45,21 +46,7 @@ std::string findResourcePath(const std::string& relativePath) {
     return relativePath;
 }
 
-// Entity structure for ECS
-struct Entity {
-    std::string name;
-    std::vector<eol::ComponentPtr> components;
-
-    template<typename T>
-    T* getComponent() {
-        for (auto& comp : components) {
-            if (T* result = dynamic_cast<T*>(comp.get())) {
-                return result;
-            }
-        }
-        return nullptr;
-    }
-};
+// NOTE: Entity struct is defined in Systems.h - don't redefine it here!
 
 // Create player entity with animations
 Entity makePlayerEntity(const sf::Texture& idleTexture, const sf::Texture& moveTexture) {
@@ -68,7 +55,7 @@ Entity makePlayerEntity(const sf::Texture& idleTexture, const sf::Texture& moveT
 
     // Transform: position, scale, rotation
     entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
-        sf::Vector2f{ 64.f, 64.f },    // Start position (will be set by level)
+        sf::Vector2f{ 400.f, 300.f },  // Center of screen
         sf::Vector2f{ 0.5f, 0.5f },    // Scale down to 64x64 pixels
         0.f
     ));
@@ -175,6 +162,8 @@ int main() {
     AnimationSystem animationSystem;
     RenderSystem renderSystem;
 
+    // TODO: Uncomment when LevelManager is fully implemented
+    /*
     // Load levels + first map
     LevelManager levels;
     levels.loadCurrentLevel();
@@ -189,9 +178,13 @@ int main() {
     );
 
     std::cout << "Exit Beacon placed at: " << exitPos.x << ", " << exitPos.y << std::endl;
+    */
 
     // Delta time clock
     sf::Clock clock;
+
+    std::cout << "Controls: WASD to move, ESC to exit" << std::endl;
+    std::cout << "Animation system active!" << std::endl;
 
     // Main game loop
     while (window.isOpen()) {
@@ -215,6 +208,8 @@ int main() {
         inputSystem.update(player, deltaTime);
         animationSystem.update(entities, deltaTime);
 
+        // TODO: Uncomment when level progression is finished
+        /*
         // Get player position for win condition check
         auto* transform = player.getComponent<eol::TransformComponent>();
         sf::Vector2f pos = transform->getPosition();
@@ -239,19 +234,21 @@ int main() {
                 );
 
                 // Reset player position for new level
-                transform->setPosition(sf::Vector2f{ 64.f, 64.f });
+                transform->setPosition(sf::Vector2f{64.f, 64.f});
             }
             else {
                 std::cout << "GAME COMPLETE — YOU WON!" << std::endl;
                 window.close();
             }
         }
+        */
 
         // Render
         window.clear(sf::Color(20, 20, 30));
 
-        // Draw map first (background)
-        levels.getMap().draw(window);
+        // TODO: Uncomment when map rendering is ready
+        // levels.getMap().draw(window);
+
 
         // Draw entities (player, enemies, etc)
         renderSystem.render(window, entities);
