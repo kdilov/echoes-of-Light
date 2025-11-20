@@ -23,14 +23,22 @@ set(EOL_SOURCES
     src/components/Component.cpp
     src/components/TransformComponent.cpp
     src/components/RenderComponent.cpp
+    src/components/AnimationComponent.cpp
     src/components/LightComponent.cpp
     src/components/PlayerComponent.cpp
     src/components/EnemyComponent.cpp
     src/components/LightSourceComponent.cpp
     src/components/PuzzleComponent.cpp
     src/components/UpgradeComponent.cpp
+    src/Systems.cpp
+    
 )
 
-add_executable(echoes-of-light ${EOL_SOURCES})
+add_executable(echoes-of-light ${EOL_SOURCES}  )
 target_include_directories(echoes-of-light PRIVATE ${SFML_INCS} include)
 target_link_libraries(echoes-of-light sfml-graphics)
+
+set_target_properties(echoes-of-light PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+
