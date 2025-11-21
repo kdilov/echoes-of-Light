@@ -54,16 +54,4 @@ private:
     void updateSpriteFromComponents(sf::Sprite& sprite, Entity& entity);
 };
 
-// Scene System
 
-class Scene {
-public:
-    Scene() = default;
-
-    virtual ~Scene() = default;
-    virtual void update(const float& dt);
-    virtual void render();
-    virtual void load() = 0;
-    virtual void unload();
-   
-};
