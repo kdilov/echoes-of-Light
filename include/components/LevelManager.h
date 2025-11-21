@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "Map.hpp"
+#include "Map.h"
 
 class LevelManager {
 public:
