@@ -1,3 +1,4 @@
+#include "SFML/Graphics.hpp"
 #include "MainMenu.h"
 #include <iostream>
 
@@ -32,9 +33,9 @@ void MainMenu::updateVisuals() {
 
 int MainMenu::run(sf::RenderWindow& window) {
     while (window.isOpen()) {
-        sf::Event event;
+        
 
-        while (window.pollEvent(event)) {
+        while (window.pollEvent()) {
             if (event.type == sf::Event::Closed)
                 return 2; // Quit
 

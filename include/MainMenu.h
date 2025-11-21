@@ -6,6 +6,7 @@
 
 class MainMenu  {
 private:
+    sf::Event event;
     sf::Font font;
     std::vector<sf::Text> buttons;
     int selectedIndex = 0;
