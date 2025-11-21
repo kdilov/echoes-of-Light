@@ -45,3 +45,5 @@ set_target_properties(echoes-of-light PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
+
+file(COPY "resources" DESTINATION "bin")
