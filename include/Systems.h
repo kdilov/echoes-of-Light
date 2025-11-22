@@ -2,11 +2,14 @@
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "components/Component.h"
+#include "components/LightEmitterComponent.h"
 
 // Simple Entity structure (same as before)
 struct Entity {
@@ -52,6 +55,87 @@ public:
 
 private:
     void updateSpriteFromComponents(sf::Sprite& sprite, Entity& entity);
+};
+
+
+// LIGHT SYSTEM - Handles emission, reflections and beam combat
+class LightSystem {
+public:
+    LightSystem();
+
+    void update(std::vector<Entity*>& entities, float deltaTime, const sf::RenderWindow& window);
+    void render(sf::RenderTarget& target, std::vector<Entity*>& entities);
+
+    void setAmbientLight(float ambient) noexcept;
+    float getAmbientLight() const noexcept;
+
+    void setDebugOverlayEnabled(bool enabled) noexcept;
+    bool isDebugOverlayEnabled() const noexcept;
+
+private:
+    struct BeamSegment {
+        sf::Vector2f start;
+        sf::Vector2f end;
+        sf::Color color;
+        float width;
+        float ttl;
+        float lifetime;
+        float intensity;
+    };
+
+    void updateEmitters(std::vector<Entity*>& entities, float deltaTime, const sf::RenderWindow& window);
+    void updateLightFields(std::vector<Entity*>& entities);
+    void refreshBeamTimers(float deltaTime);
+    void emitBeam(Entity& owner,
+                  eol::LightEmitterComponent& emitter,
+                  std::vector<Entity*>& entities,
+                  const sf::Vector2f& origin,
+                  const sf::Vector2f& direction);
+    void castBeam(Entity& owner,
+                  std::vector<Entity*>& entities,
+                  const sf::Vector2f& origin,
+                  const sf::Vector2f& direction,
+                  float range,
+                  float width,
+                  sf::Color color,
+                  float intensity,
+                  float ttl,
+                  std::uint32_t reflectionsLeft);
+    bool rayIntersectsRect(const sf::Vector2f& origin,
+                           const sf::Vector2f& direction,
+                           float maxDistance,
+                           const sf::FloatRect& bounds,
+                           float& outDistance,
+                           sf::Vector2f& outNormal) const;
+    bool rayIntersectsMirror(const sf::Vector2f& origin,
+                             const sf::Vector2f& direction,
+                             float maxDistance,
+                             Entity& mirrorEntity,
+                             float& outDistance,
+                             sf::Vector2f& outNormal) const;
+    std::optional<sf::FloatRect> computeBounds(Entity& entity) const;
+    std::optional<sf::FloatRect> computeMirrorBounds(Entity& entity) const;
+    void handleBeamImpact(Entity& target, float intensity, const sf::Vector2f& hitPoint);
+    void applyPuzzleLight(Entity& entity, float intensity);
+    void applyEnemyDamage(Entity& entity, float intensity);
+    sf::Vector2f reflect(const sf::Vector2f& direction, const sf::Vector2f& normal) const;
+    sf::Vector2f aimDirectionFor(Entity& owner,
+                                 const std::vector<Entity*>& entities,
+                                 const sf::RenderWindow& window) const;
+    Entity* findPlayer(const std::vector<Entity*>& entities) const;
+    void ensureOverlaySize(const sf::RenderTarget& target);
+    void drawBeams(sf::RenderTarget& target) const;
+    void drawOverlay(sf::RenderTarget& target) const;
+    void drawDebugData(sf::RenderTarget& target) const;
+    void drawLightGlows(sf::RenderTarget& target, std::vector<Entity*>& entities);
+
+private:
+    std::vector<BeamSegment> m_beamSegments;
+    sf::RectangleShape m_darknessOverlay;
+    bool m_debugOverlay;
+    float m_ambientLight;
+    std::vector<sf::FloatRect> m_debugMirrorBounds;
+    std::vector<sf::Vector2f> m_debugHitPoints;
 };
 
 
