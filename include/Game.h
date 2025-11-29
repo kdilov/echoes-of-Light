@@ -56,6 +56,7 @@ private:
     InputSystem inputSystem_;
     AnimationSystem animationSystem_;
     RenderSystem renderSystem_;
+    CombatSystem combatSystem_;
     LightSystem lightSystem_;
 };
 

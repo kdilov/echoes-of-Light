@@ -36,10 +36,11 @@ struct Entity {
 // INPUT SYSTEM - Handles player keyboard input
 class InputSystem {
 public:
-    void update(Entity& player, float deltaTime);
+    void update(Entity& player, float deltaTime, const sf::RenderWindow& window);
 
 private:
     sf::Vector2f getMovementInput() const;
+    void updatePlayerEmitter(Entity& player, const sf::RenderWindow& window);
 };
 
 // ANIMATION SYSTEM - Updates all entity animations
@@ -57,11 +58,21 @@ private:
     void updateSpriteFromComponents(sf::Sprite& sprite, Entity& entity);
 };
 
+// COMBAT SYSTEM - Handles HP, resistances and hit reactions
+class CombatSystem {
+public:
+    void applyBeamHit(Entity& attacker, Entity& target, float intensity, const sf::Vector2f& hitPoint);
+
+private:
+    bool applyEnemyHit(Entity& target, float intensity);
+    void applyPlayerHit(Entity& attacker, Entity& target, float intensity);
+};
+
 
 // LIGHT SYSTEM - Handles emission, reflections and beam combat
 class LightSystem {
 public:
-    LightSystem();
+    explicit LightSystem(CombatSystem& combatSystem);
 
     void update(std::vector<Entity*>& entities, float deltaTime, const sf::RenderWindow& window);
     void render(sf::RenderTarget& target, std::vector<Entity*>& entities);
@@ -84,7 +95,7 @@ private:
     };
 
     void updateEmitters(std::vector<Entity*>& entities, float deltaTime, const sf::RenderWindow& window);
-    void updateLightFields(std::vector<Entity*>& entities);
+    void updateLightFields(std::vector<Entity*>& entities, float deltaTime);
     void refreshBeamTimers(float deltaTime);
     void emitBeam(Entity& owner,
                   eol::LightEmitterComponent& emitter,
@@ -115,9 +126,8 @@ private:
                              sf::Vector2f& outNormal) const;
     std::optional<sf::FloatRect> computeBounds(Entity& entity) const;
     std::optional<sf::FloatRect> computeMirrorBounds(Entity& entity) const;
-    void handleBeamImpact(Entity& target, float intensity, const sf::Vector2f& hitPoint);
+    void handleBeamImpact(Entity& owner, Entity& target, float intensity, const sf::Vector2f& hitPoint);
     void applyPuzzleLight(Entity& entity, float intensity);
-    void applyEnemyDamage(Entity& entity, float intensity);
     sf::Vector2f reflect(const sf::Vector2f& direction, const sf::Vector2f& normal) const;
     sf::Vector2f aimDirectionFor(Entity& owner,
                                  const std::vector<Entity*>& entities,
@@ -136,6 +146,7 @@ private:
     float m_ambientLight;
     std::vector<sf::FloatRect> m_debugMirrorBounds;
     std::vector<sf::Vector2f> m_debugHitPoints;
+    CombatSystem& m_combat;
 };
 
 
