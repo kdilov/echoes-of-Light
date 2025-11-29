@@ -69,7 +69,8 @@ Game::Game()
     , enemy_{}
     , entities_{}
     , worldObjects_{}
-    , lightSystem_{} {}
+    , combatSystem_{}
+    , lightSystem_{combatSystem_} {}
 
 int Game::run() {
     if (!initialized_ && !initialize()) {
@@ -244,7 +245,7 @@ Entity Game::createLightBeaconEntity() {
 
     auto beaconLight = std::make_unique<eol::LightComponent>();
     beaconLight->setRadius(220.f);
-    beaconLight->setIntensity(0.2f);
+    beaconLight->setBaseIntensity(0.2f);
     entity.components.emplace_back(std::move(beaconLight));
 
     entity.components.emplace_back(std::make_unique<eol::RenderComponent>());
@@ -257,7 +258,21 @@ Entity Game::createEnemyEntity() {
     entity.components.emplace_back(std::make_unique<eol::TransformComponent>());
     entity.components.emplace_back(std::make_unique<eol::EnemyComponent>());
     entity.components.emplace_back(std::make_unique<eol::RenderComponent>());
-    entity.components.emplace_back(std::make_unique<eol::LightComponent>());
+    auto enemyLight = std::make_unique<eol::LightComponent>();
+    enemyLight->setBaseIntensity(0.35f);
+    enemyLight->setRadius(140.f);
+    entity.components.emplace_back(std::move(enemyLight));
+
+    auto emitter = std::make_unique<eol::LightEmitterComponent>();
+    emitter->setBeamLength(520.f);
+    emitter->setBeamWidth(10.f);
+    emitter->setDamage(35.f);
+    emitter->setCooldown(0.9f);
+    emitter->setContinuousFire(true);
+    emitter->setMaxReflections(2);
+    emitter->setBeamColor(sf::Color(255, 140, 80, 255));
+    entity.components.emplace_back(std::move(emitter));
+
     return entity;
 }
 
@@ -321,7 +336,7 @@ Entity Game::createLightSourceNode(const std::string& name,
 
     auto light = std::make_unique<eol::LightComponent>();
     light->setRadius(180.f);
-    light->setIntensity(0.6f);
+    light->setBaseIntensity(0.6f);
     entity.components.emplace_back(std::move(light));
 
     auto render = std::make_unique<eol::RenderComponent>();
@@ -351,7 +366,7 @@ void Game::handleEvents() {
 }
 
 void Game::update(float deltaTime) {
-    inputSystem_.update(player_, deltaTime);
+    inputSystem_.update(player_, deltaTime, window_);
     animationSystem_.update(entities_, deltaTime);
     lightSystem_.update(entities_, deltaTime, window_);
 
