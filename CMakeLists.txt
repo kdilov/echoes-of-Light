@@ -37,6 +37,7 @@ set(EOL_SOURCES
     src/systems/InputSystem.cpp
     src/systems/AnimationSystem.cpp
     src/systems/RenderSystem.cpp
+    src/systems/CombatSystem.cpp
     src/systems/LightSystem.cpp
   
     

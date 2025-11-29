@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 namespace {
 constexpr float kEpsilon = 0.0001f;
@@ -49,13 +50,14 @@ sf::Vector2f rotateVector(const sf::Vector2f& v, float degrees) {
 }
 } // namespace
 
-LightSystem::LightSystem()
+LightSystem::LightSystem(CombatSystem& combatSystem)
     : m_beamSegments()
     , m_darknessOverlay()
     , m_debugOverlay(false)
     , m_ambientLight(0.28f)
     , m_debugMirrorBounds()
-    , m_debugHitPoints() {
+    , m_debugHitPoints()
+    , m_combat(combatSystem) {
     m_darknessOverlay.setFillColor(sf::Color(0, 0, 0, 200));
 }
 
@@ -78,7 +80,7 @@ bool LightSystem::isDebugOverlayEnabled() const noexcept {
 void LightSystem::update(std::vector<Entity*>& entities, float deltaTime, const sf::RenderWindow& window) {
     refreshBeamTimers(deltaTime);
     updateEmitters(entities, deltaTime, window);
-    updateLightFields(entities);
+    updateLightFields(entities, deltaTime);
 }
 
 void LightSystem::render(sf::RenderTarget& target, std::vector<Entity*>& entities) {
@@ -107,7 +109,12 @@ void LightSystem::refreshBeamTimers(float deltaTime) {
 void LightSystem::updateEmitters(std::vector<Entity*>& entities,
                                  float deltaTime,
                                  const sf::RenderWindow& window) {
-    if (m_debugOverlay) {
+    auto refreshDebugBounds = [this, &entities]() {
+        if (!m_debugOverlay) {
+            m_debugMirrorBounds.clear();
+            return;
+        }
+
         m_debugMirrorBounds.clear();
         for (Entity* entity : entities) {
             if (!entity) continue;
@@ -115,10 +122,19 @@ void LightSystem::updateEmitters(std::vector<Entity*>& entities,
                 m_debugMirrorBounds.push_back(*bounds);
             }
         }
-    } else {
-        m_debugMirrorBounds.clear();
-    }
+    };
+
+    refreshDebugBounds();
     m_debugHitPoints.clear();
+
+    struct PendingShot {
+        Entity* owner;
+        eol::LightEmitterComponent* emitter;
+        sf::Vector2f origin;
+    };
+
+    std::vector<PendingShot> readyShots;
+    readyShots.reserve(entities.size());
 
     for (Entity* entity : entities) {
         if (!entity) continue;
@@ -130,29 +146,32 @@ void LightSystem::updateEmitters(std::vector<Entity*>& entities,
         }
 
         emitter->advanceCooldown(deltaTime);
-        emitter->setDirection(aimDirectionFor(*entity, entities, window));
 
-        bool triggerHeld = emitter->isTriggerHeld();
-        if (entity->name == "Player") {
-            triggerHeld = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)
-                || sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-        } else if (entity->getComponent<eol::EnemyComponent>()) {
-            triggerHeld = emitter->usesContinuousFire();
+        const bool isPlayer = (entity->name == "Player");
+        if (!isPlayer) {
+            emitter->setDirection(aimDirectionFor(*entity, entities, window));
         }
 
-        emitter->setTriggerHeld(triggerHeld);
+        bool triggerHeld = emitter->isTriggerHeld();
+        if (entity->getComponent<eol::EnemyComponent>()) {
+            triggerHeld = emitter->usesContinuousFire();
+            emitter->setTriggerHeld(triggerHeld);
+        }
 
         if (!triggerHeld || !emitter->canFire()) {
             continue;
         }
 
-        auto bounds = computeBounds(*entity);
         sf::Vector2f origin = transform->getPosition();
-        if (bounds) {
+        if (auto bounds = computeBounds(*entity)) {
             origin = rectCenter(*bounds);
         }
 
-        emitBeam(*entity, *emitter, entities, origin, emitter->getDirection());
+        readyShots.push_back(PendingShot{entity, emitter, origin});
+    }
+
+    for (const PendingShot& shot : readyShots) {
+        emitBeam(*shot.owner, *shot.emitter, entities, shot.origin, shot.emitter->getDirection());
     }
 }
 
@@ -322,7 +341,7 @@ void LightSystem::castBeam(Entity& owner,
             break;
         }
 
-        handleBeamImpact(*hitEntity, currentIntensity, endPoint);
+        handleBeamImpact(owner, *hitEntity, currentIntensity, endPoint);
         if (m_debugOverlay) {
             m_debugHitPoints.push_back(endPoint);
         }
@@ -456,13 +475,14 @@ std::optional<sf::FloatRect> LightSystem::computeBounds(Entity& entity) const {
     return std::nullopt;
 }
 
-void LightSystem::handleBeamImpact(Entity& target, float intensity, const sf::Vector2f& hitPoint) {
+void LightSystem::handleBeamImpact(Entity& owner, Entity& target, float intensity, const sf::Vector2f& hitPoint) {
     applyPuzzleLight(target, intensity);
-    applyEnemyDamage(target, intensity);
+    m_combat.applyBeamHit(owner, target, intensity, hitPoint);
 
     if (auto* light = target.getComponent<eol::LightComponent>()) {
         const float boosted = clampf(light->getIntensity() + intensity * 0.01f, 0.f, 1.5f);
         light->setIntensity(boosted);
+        light->resetBoostTimer();
     }
 
     if (auto* source = target.getComponent<eol::LightSourceComponent>()) {
@@ -485,22 +505,6 @@ void LightSystem::applyPuzzleLight(Entity& entity, float intensity) {
     if (puzzle->getAccumulatedLight() >= static_cast<float>(puzzle->getRequiredLight())) {
         puzzle->setSolved(true);
         std::cout << "[LightSystem] Beacon " << entity.name << " reactivated." << std::endl;
-    }
-}
-
-void LightSystem::applyEnemyDamage(Entity& entity, float intensity) {
-    auto* enemy = entity.getComponent<eol::EnemyComponent>();
-    if (!enemy) {
-        return;
-    }
-
-    const float newResistance = std::max(0.f, enemy->getResistance() - intensity * 0.05f);
-    enemy->setResistance(newResistance);
-    if (newResistance <= 0.01f) {
-        enemy->setBlocksLight(false);
-        if (auto* render = entity.getComponent<eol::RenderComponent>()) {
-            render->setTint(sf::Color(30, 30, 30, 180));
-        }
     }
 }
 
@@ -550,7 +554,7 @@ Entity* LightSystem::findPlayer(const std::vector<Entity*>& entities) const {
     return nullptr;
 }
 
-void LightSystem::updateLightFields(std::vector<Entity*>& entities) {
+void LightSystem::updateLightFields(std::vector<Entity*>& entities, float deltaTime) {
     for (Entity* entity : entities) {
         if (!entity) continue;
 
@@ -558,6 +562,23 @@ void LightSystem::updateLightFields(std::vector<Entity*>& entities) {
         auto* render = entity->getComponent<eol::RenderComponent>();
         if (!light || !render) {
             continue;
+        }
+
+        light->advanceBoostTimer(deltaTime);
+
+        if (light->getIntensity() > light->getBaseIntensity()) {
+            if (light->getBoostTimer() >= light->getDecayDelay()) {
+                const float newIntensity = std::max(
+                    light->getBaseIntensity(),
+                    light->getIntensity() - light->getDecayRate() * deltaTime);
+                light->setIntensity(newIntensity);
+            }
+        }
+        else if (light->getIntensity() < light->getBaseIntensity()) {
+            const float restoreIntensity = std::min(
+                light->getBaseIntensity(),
+                light->getIntensity() + light->getDecayRate() * deltaTime * 0.5f);
+            light->setIntensity(restoreIntensity);
         }
 
         const float brightness = clampf(m_ambientLight + light->getIntensity(), 0.f, 1.25f);
