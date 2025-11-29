@@ -30,6 +30,7 @@ set(EOL_SOURCES
     src/components/LightEmitterComponent.cpp
     src/components/PlayerComponent.cpp
     src/components/EnemyComponent.cpp
+    src/components/MeleeAttackComponent.cpp
     src/components/LightSourceComponent.cpp
     src/components/MirrorComponent.cpp
     src/components/PuzzleComponent.cpp

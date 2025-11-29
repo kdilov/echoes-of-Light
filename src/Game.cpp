@@ -10,6 +10,7 @@
 #include "components/EnemyComponent.h"
 #include "components/LightComponent.h"
 #include "components/LightEmitterComponent.h"
+#include "components/MeleeAttackComponent.h"
 #include "components/LightSourceComponent.h"
 #include "components/MirrorComponent.h"
 #include "components/PlayerComponent.h"
@@ -255,23 +256,31 @@ Entity Game::createLightBeaconEntity() {
 Entity Game::createEnemyEntity() {
     Entity entity;
     entity.name = "Enemy";
-    entity.components.emplace_back(std::make_unique<eol::TransformComponent>());
+    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
+        sf::Vector2f{520.f, 320.f},
+        sf::Vector2f{1.f, 1.f},
+        0.f));
     entity.components.emplace_back(std::make_unique<eol::EnemyComponent>());
-    entity.components.emplace_back(std::make_unique<eol::RenderComponent>());
+
+    auto render = std::make_unique<eol::RenderComponent>();
+    sf::Sprite& sprite = render->getSprite();
+    sprite.setTexture(debugWhiteTexture_);
+    sprite.setTextureRect(sf::IntRect(sf::Vector2i{0, 0}, sf::Vector2i{1, 1}));
+    sprite.setOrigin(sf::Vector2f{0.5f, 0.5f});
+    sprite.setScale(sf::Vector2f{28.f, 36.f});
+    render->setTint(sf::Color(255, 110, 110, 240));
+    entity.components.emplace_back(std::move(render));
+
     auto enemyLight = std::make_unique<eol::LightComponent>();
-    enemyLight->setBaseIntensity(0.35f);
-    enemyLight->setRadius(140.f);
+    enemyLight->setBaseIntensity(0.15f);
+    enemyLight->setRadius(110.f);
     entity.components.emplace_back(std::move(enemyLight));
 
-    auto emitter = std::make_unique<eol::LightEmitterComponent>();
-    emitter->setBeamLength(520.f);
-    emitter->setBeamWidth(10.f);
-    emitter->setDamage(35.f);
-    emitter->setCooldown(0.9f);
-    emitter->setContinuousFire(true);
-    emitter->setMaxReflections(2);
-    emitter->setBeamColor(sf::Color(255, 140, 80, 255));
-    entity.components.emplace_back(std::move(emitter));
+    auto melee = std::make_unique<eol::MeleeAttackComponent>();
+    melee->setDamage(22.f);
+    melee->setRange(60.f);
+    melee->setCooldown(1.2f);
+    entity.components.emplace_back(std::move(melee));
 
     return entity;
 }
@@ -368,6 +377,7 @@ void Game::handleEvents() {
 void Game::update(float deltaTime) {
     inputSystem_.update(player_, deltaTime, window_);
     animationSystem_.update(entities_, deltaTime);
+    combatSystem_.updateMeleeAttacks(entities_, deltaTime);
     lightSystem_.update(entities_, deltaTime, window_);
 
     // Level progression and win-condition logic will be reinstated when

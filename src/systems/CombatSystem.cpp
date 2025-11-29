@@ -2,8 +2,10 @@
 
 #include "components/EnemyComponent.h"
 #include "components/LightComponent.h"
+#include "components/MeleeAttackComponent.h"
 #include "components/PlayerComponent.h"
 #include "components/RenderComponent.h"
+#include "components/TransformComponent.h"
 
 #include <algorithm>
 
@@ -11,6 +13,12 @@ namespace {
 
 float clampf(float value, float minValue, float maxValue) {
     return std::max(minValue, std::min(maxValue, value));
+}
+
+float distanceSquared(const sf::Vector2f& a, const sf::Vector2f& b) {
+    const float dx = a.x - b.x;
+    const float dy = a.y - b.y;
+    return dx * dx + dy * dy;
 }
 
 } // namespace
@@ -23,7 +31,51 @@ void CombatSystem::applyBeamHit(Entity& attacker,
         return;
     }
 
-    applyPlayerHit(attacker, target, intensity);
+    constexpr float baseDamage = 8.f;
+    float damage = baseDamage + intensity * 0.15f;
+    if (attacker.getComponent<eol::EnemyComponent>()) {
+        damage *= 1.25f;
+    }
+
+    applyPlayerDamage(attacker, target, damage);
+}
+
+void CombatSystem::applyMeleeHit(Entity& attacker, Entity& target, float damage) {
+    applyPlayerDamage(attacker, target, damage);
+}
+
+void CombatSystem::updateMeleeAttacks(std::vector<Entity*>& entities, float deltaTime) {
+    Entity* player = findPlayer(entities);
+    if (!player) {
+        return;
+    }
+
+    auto* playerTransform = player->getComponent<eol::TransformComponent>();
+    if (!playerTransform) {
+        return;
+    }
+
+    const sf::Vector2f playerPos = playerTransform->getPosition();
+
+    for (Entity* entity : entities) {
+        if (!entity) continue;
+
+        auto* melee = entity->getComponent<eol::MeleeAttackComponent>();
+        auto* transform = entity->getComponent<eol::TransformComponent>();
+        if (!melee || !transform || !melee->isEnabled()) {
+            continue;
+        }
+
+        melee->advanceCooldown(deltaTime);
+
+        const float range = melee->getRange();
+        if (distanceSquared(transform->getPosition(), playerPos) <= range * range) {
+            if (melee->canAttack()) {
+                applyMeleeHit(*entity, *player, melee->getDamage());
+                melee->resetCooldown();
+            }
+        }
+    }
 }
 
 bool CombatSystem::applyEnemyHit(Entity& target, float intensity) {
@@ -63,7 +115,11 @@ bool CombatSystem::applyEnemyHit(Entity& target, float intensity) {
     return true;
 }
 
-void CombatSystem::applyPlayerHit(Entity& attacker, Entity& target, float intensity) {
+void CombatSystem::applyPlayerDamage(Entity& attacker, Entity& target, float damage) {
+    if (damage <= 0.f) {
+        return;
+    }
+
     auto* player = target.getComponent<eol::PlayerComponent>();
     if (!player) {
         return;
@@ -73,10 +129,9 @@ void CombatSystem::applyPlayerHit(Entity& attacker, Entity& target, float intens
         return;
     }
 
-    constexpr float baseDamage = 8.f;
-    float damage = baseDamage + intensity * 0.15f;
-    if (attacker.getComponent<eol::EnemyComponent>()) {
-        damage *= 1.25f;
+    // Slightly reduce damage if attacker is not hostile (future use)
+    if (!attacker.getComponent<eol::EnemyComponent>()) {
+        damage *= 0.8f;
     }
 
     player->applyDamage(damage);
@@ -84,5 +139,14 @@ void CombatSystem::applyPlayerHit(Entity& attacker, Entity& target, float intens
     if (auto* render = target.getComponent<eol::RenderComponent>()) {
         render->setTint(sf::Color(255, 160, 160, 220));
     }
+}
+
+Entity* CombatSystem::findPlayer(const std::vector<Entity*>& entities) const {
+    for (Entity* entity : entities) {
+        if (entity && entity->name == "Player") {
+            return entity;
+        }
+    }
+    return nullptr;
 }
 

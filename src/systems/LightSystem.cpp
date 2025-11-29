@@ -1,6 +1,5 @@
 #include "Systems.h"
 
-#include "components/EnemyComponent.h"
 #include "components/LightComponent.h"
 #include "components/LightEmitterComponent.h"
 #include "components/LightSourceComponent.h"
@@ -147,18 +146,7 @@ void LightSystem::updateEmitters(std::vector<Entity*>& entities,
 
         emitter->advanceCooldown(deltaTime);
 
-        const bool isPlayer = (entity->name == "Player");
-        if (!isPlayer) {
-            emitter->setDirection(aimDirectionFor(*entity, entities, window));
-        }
-
-        bool triggerHeld = emitter->isTriggerHeld();
-        if (entity->getComponent<eol::EnemyComponent>()) {
-            triggerHeld = emitter->usesContinuousFire();
-            emitter->setTriggerHeld(triggerHeld);
-        }
-
-        if (!triggerHeld || !emitter->canFire()) {
+        if (!emitter->isTriggerHeld() || !emitter->canFire()) {
             continue;
         }
 
@@ -511,47 +499,6 @@ void LightSystem::applyPuzzleLight(Entity& entity, float intensity) {
 sf::Vector2f LightSystem::reflect(const sf::Vector2f& direction, const sf::Vector2f& normal) const {
     const sf::Vector2f n = normalizeVector(normal);
     return normalizeVector(direction - 2.f * dot(direction, n) * n);
-}
-
-sf::Vector2f LightSystem::aimDirectionFor(Entity& owner,
-                                          const std::vector<Entity*>& entities,
-                                          const sf::RenderWindow& window) const {
-    auto* transform = owner.getComponent<eol::TransformComponent>();
-    if (!transform) {
-        return sf::Vector2f{1.f, 0.f};
-    }
-
-    auto bounds = computeBounds(owner);
-    sf::Vector2f origin = transform->getPosition();
-    if (bounds) {
-        origin = rectCenter(*bounds);
-    }
-
-    if (owner.name == "Player") {
-        const sf::Vector2f cursor = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-        return normalizeVector(cursor - origin);
-    }
-
-    if (owner.getComponent<eol::EnemyComponent>()) {
-        if (Entity* player = findPlayer(entities)) {
-            if (auto playerBounds = computeBounds(*player)) {
-                return normalizeVector(rectCenter(*playerBounds) - origin);
-            }
-        }
-    }
-
-    constexpr float radPerDeg = 3.1415926535f / 180.f;
-    const float radians = transform->getRotation() * radPerDeg;
-    return normalizeVector(sf::Vector2f(std::cos(radians), std::sin(radians)));
-}
-
-Entity* LightSystem::findPlayer(const std::vector<Entity*>& entities) const {
-    for (Entity* entity : entities) {
-        if (entity && entity->name == "Player") {
-            return entity;
-        }
-    }
-    return nullptr;
 }
 
 void LightSystem::updateLightFields(std::vector<Entity*>& entities, float deltaTime) {

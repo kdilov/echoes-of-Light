@@ -62,10 +62,13 @@ private:
 class CombatSystem {
 public:
     void applyBeamHit(Entity& attacker, Entity& target, float intensity, const sf::Vector2f& hitPoint);
+    void applyMeleeHit(Entity& attacker, Entity& target, float damage);
+    void updateMeleeAttacks(std::vector<Entity*>& entities, float deltaTime);
 
 private:
     bool applyEnemyHit(Entity& target, float intensity);
-    void applyPlayerHit(Entity& attacker, Entity& target, float intensity);
+    void applyPlayerDamage(Entity& attacker, Entity& target, float damage);
+    Entity* findPlayer(const std::vector<Entity*>& entities) const;
 };
 
 
@@ -129,10 +132,6 @@ private:
     void handleBeamImpact(Entity& owner, Entity& target, float intensity, const sf::Vector2f& hitPoint);
     void applyPuzzleLight(Entity& entity, float intensity);
     sf::Vector2f reflect(const sf::Vector2f& direction, const sf::Vector2f& normal) const;
-    sf::Vector2f aimDirectionFor(Entity& owner,
-                                 const std::vector<Entity*>& entities,
-                                 const sf::RenderWindow& window) const;
-    Entity* findPlayer(const std::vector<Entity*>& entities) const;
     void ensureOverlaySize(const sf::RenderTarget& target);
     void drawBeams(sf::RenderTarget& target) const;
     void drawOverlay(sf::RenderTarget& target) const;
