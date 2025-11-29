@@ -3,7 +3,7 @@
 #include <vector>
 #include <SFML/System/Vector2.hpp>
 
-#include "Map.hpp"
+#include "components/Map.h"
 
 // Struct that stores all special tile positions for a level
 struct LevelObjects {
