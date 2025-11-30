@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "components/Component.h"
+#include "components/EnemyAIComponent.h"
 #include "components/LightEmitterComponent.h"
 
 // Simple Entity structure (same as before)
@@ -69,6 +70,26 @@ private:
     bool applyEnemyHit(Entity& target, float intensity);
     void applyPlayerDamage(Entity& attacker, Entity& target, float damage);
     Entity* findPlayer(const std::vector<Entity*>& entities) const;
+};
+
+// ENEMY AI SYSTEM - Decision tree behaviors
+class EnemyAISystem {
+public:
+    void update(std::vector<Entity*>& entities, float deltaTime, Entity& player);
+
+private:
+    void driveBehavior(Entity& entity,
+                       eol::EnemyAIComponent& ai,
+                       const sf::Vector2f& playerPos,
+                       float deltaTime);
+    void executePatrol(Entity& entity,
+                       eol::EnemyAIComponent& ai,
+                       float deltaTime);
+    void executeChase(Entity& entity,
+                      const eol::EnemyAIComponent& ai,
+                      const sf::Vector2f& playerPos,
+                      float deltaTime);
+    void executeAttack(Entity& entity);
 };
 
 

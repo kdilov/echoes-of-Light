@@ -26,6 +26,7 @@ set(EOL_SOURCES
     src/components/TransformComponent.cpp
     src/components/RenderComponent.cpp
     src/components/AnimationComponent.cpp
+    src/components/EnemyAIComponent.cpp
     src/components/LightComponent.cpp
     src/components/LightEmitterComponent.cpp
     src/components/PlayerComponent.cpp
@@ -39,6 +40,7 @@ set(EOL_SOURCES
     src/systems/AnimationSystem.cpp
     src/systems/RenderSystem.cpp
     src/systems/CombatSystem.cpp
+    src/systems/EnemyAISystem.cpp
     src/systems/LightSystem.cpp
   
     

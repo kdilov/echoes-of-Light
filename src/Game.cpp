@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "components/AnimationComponent.h"
+#include "components/EnemyAIComponent.h"
 #include "components/EnemyComponent.h"
 #include "components/LightComponent.h"
 #include "components/LightEmitterComponent.h"
@@ -71,6 +72,7 @@ Game::Game()
     , entities_{}
     , worldObjects_{}
     , combatSystem_{}
+    , enemyAISystem_{}
     , lightSystem_{combatSystem_} {}
 
 int Game::run() {
@@ -282,6 +284,17 @@ Entity Game::createEnemyEntity() {
     melee->setCooldown(1.2f);
     entity.components.emplace_back(std::move(melee));
 
+    auto ai = std::make_unique<eol::EnemyAIComponent>();
+    const sf::Vector2f basePos{520.f, 320.f};
+    ai->setPatrolPoints({
+        basePos,
+        basePos + sf::Vector2f{-140.f, 0.f}
+    });
+    ai->setDetectionRange(260.f);
+    ai->setAttackRange(10.f);
+    ai->setMoveSpeed(30.f);
+    entity.components.emplace_back(std::move(ai));
+
     return entity;
 }
 
@@ -377,6 +390,7 @@ void Game::handleEvents() {
 void Game::update(float deltaTime) {
     inputSystem_.update(player_, deltaTime, window_);
     animationSystem_.update(entities_, deltaTime);
+    enemyAISystem_.update(entities_, deltaTime, player_);
     combatSystem_.updateMeleeAttacks(entities_, deltaTime);
     lightSystem_.update(entities_, deltaTime, window_);
 

@@ -8,7 +8,7 @@
 #include "components/TransformComponent.h"
 
 #include <algorithm>
-
+#include <iostream>
 namespace {
 
 float clampf(float value, float minValue, float maxValue) {
@@ -139,6 +139,9 @@ void CombatSystem::applyPlayerDamage(Entity& attacker, Entity& target, float dam
     if (auto* render = target.getComponent<eol::RenderComponent>()) {
         render->setTint(sf::Color(255, 160, 160, 220));
     }
+    std::cout << "Player damaged: " << damage << std::endl;
+    std::cout << "Player health: " << player->getHealth() << std::endl;
+    std::cout << "Player max health: " << player->getMaxHealth() << std::endl;
 }
 
 Entity* CombatSystem::findPlayer(const std::vector<Entity*>& entities) const {

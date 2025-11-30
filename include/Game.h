@@ -57,6 +57,7 @@ private:
     AnimationSystem animationSystem_;
     RenderSystem renderSystem_;
     CombatSystem combatSystem_;
+    EnemyAISystem enemyAISystem_;
     LightSystem lightSystem_;
 };
 
