@@ -36,12 +36,14 @@ set(EOL_SOURCES
     src/components/MirrorComponent.cpp
     src/components/PuzzleComponent.cpp
     src/components/UpgradeComponent.cpp
+    src/components/CollisionComponent.cpp
     src/systems/InputSystem.cpp
     src/systems/AnimationSystem.cpp
     src/systems/RenderSystem.cpp
     src/systems/CombatSystem.cpp
     src/systems/EnemyAISystem.cpp
     src/systems/LightSystem.cpp
+    src/systems/CollisionSystem.cpp 
   
     
 )

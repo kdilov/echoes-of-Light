@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "components/AnimationComponent.h"
+#include "components/CollisionComponent.h"
 #include "components/EnemyAIComponent.h"
 #include "components/EnemyComponent.h"
 #include "components/LightComponent.h"
@@ -177,6 +178,13 @@ void Game::createEntities() {
                                         eol::MirrorComponent::MirrorType::Flat));
     addWorldEntity(createLightSourceNode("PrismNode", sf::Vector2f{260.f, 360.f}, true));
     addWorldEntity(createLightSourceNode("AccessLight", sf::Vector2f{700.f, 420.f}, false));
+    
+    // Test walls for collision
+    addWorldEntity(createWallEntity(sf::Vector2f{ 400.f, 100.f }, sf::Vector2f{ 200.f, 20.f }));
+    addWorldEntity(createWallEntity(sf::Vector2f{ 100.f, 300.f }, sf::Vector2f{ 20.f, 150.f }));
+    addWorldEntity(createWallEntity(sf::Vector2f{ 600.f, 450.f }, sf::Vector2f{ 50.f, 50.f }));
+    addWorldEntity(createWallEntity(sf::Vector2f{ 200.f, 520.f }, sf::Vector2f{ 100.f, 20.f }));
+    addWorldEntity(createWallEntity(sf::Vector2f{ 290.f, 470.f }, sf::Vector2f{ 20.f, 80.f }));
 }
 
 Entity Game::createPlayerEntity() {
@@ -190,6 +198,11 @@ Entity Game::createPlayerEntity() {
 
     entity.components.emplace_back(std::make_unique<eol::RenderComponent>());
     entity.components.emplace_back(std::make_unique<eol::PlayerComponent>());
+
+    auto collision = std::make_unique<eol::CollisionComponent>();
+    collision->setBoundingBox(sf::Vector2f{ 28.f, 28.f });
+    collision->setSolid(true);
+    entity.components.emplace_back(std::move(collision));
 
     auto animationComponent = std::make_unique<eol::AnimationComponent>();
 
@@ -373,6 +386,35 @@ Entity Game::createLightSourceNode(const std::string& name,
     return entity;
 }
 
+Entity Game::createWallEntity(const sf::Vector2f& position, const sf::Vector2f& size) {
+    Entity entity;
+    entity.name = "Wall";
+
+    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
+        position,
+        sf::Vector2f{ size.x / 2.f, size.y / 2.f },
+        0.f));
+
+    // Collision - this is what stops the player
+    auto collision = std::make_unique<eol::CollisionComponent>();
+    collision->setBoundingBox(size);
+    collision->setSolid(true);
+    entity.components.emplace_back(std::move(collision));
+
+    // Render - so we can see the wall
+    auto render = std::make_unique<eol::RenderComponent>();
+    sf::Sprite& sprite = render->getSprite();
+    sprite.setTexture(debugWhiteTexture_);
+    sprite.setTextureRect(sf::IntRect(sf::Vector2i{ 0, 0 }, sf::Vector2i{ 2, 2 }));
+    sprite.setOrigin(sf::Vector2f{ 1.f, 1.f });
+    render->setTint(sf::Color(160, 160, 180, 220));  
+    entity.components.emplace_back(std::move(render));
+
+    
+
+    return entity;
+}
+
 void Game::handleEvents() {
     while (const auto event = window_.pollEvent()) {
         if (event->is<sf::Event::Closed>()) {
@@ -388,7 +430,7 @@ void Game::handleEvents() {
 }
 
 void Game::update(float deltaTime) {
-    inputSystem_.update(player_, deltaTime, window_);
+    inputSystem_.updateWithCollision(player_, deltaTime, window_, entities_);
     animationSystem_.update(entities_, deltaTime);
     enemyAISystem_.update(entities_, deltaTime, player_);
     combatSystem_.updateMeleeAttacks(entities_, deltaTime);
@@ -402,6 +444,7 @@ void Game::render() {
     window_.clear(sf::Color(20, 20, 30));
     renderSystem_.render(window_, entities_);
     lightSystem_.render(window_, entities_);
+
     window_.display();
 }
 
