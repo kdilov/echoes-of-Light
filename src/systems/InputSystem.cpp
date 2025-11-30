@@ -1,10 +1,12 @@
 #include "Systems.h"
-
+#include "systems/CollisionSystem.h"
 #include "components/AnimationComponent.h"
 #include "components/LightEmitterComponent.h"
 #include "components/PlayerComponent.h"
 #include "components/RenderComponent.h"
 #include "components/TransformComponent.h"
+#include "components/CollisionComponent.h"
+#include "components/MirrorComponent.h"
 
 #include <cmath>
 
@@ -44,15 +46,97 @@ void InputSystem::update(Entity& player, float deltaTime, const sf::RenderWindow
         pos.x += movement.x * speed * deltaTime;
         pos.y += movement.y * speed * deltaTime;
 
-        if (pos.x < 0.f) pos.x = 0.f;
-        if (pos.y < 0.f) pos.y = 0.f;
-        if (pos.x > 736.f) pos.x = 736.f;
-        if (pos.y > 536.f) pos.y = 536.f;
+        if (pos.x < 32.f) pos.x = 32.f;
+        if (pos.y < 32.f) pos.y = 32.f;
+        if (pos.x > 768.f) pos.x = 768.f;
+        if (pos.y > 568.f) pos.y = 568.f;
 
         transform->setPosition(pos);
     }
 
     updatePlayerEmitter(player, window);
+}
+
+// update with collision checking to test
+void InputSystem::updateWithCollision(Entity& player,
+    float deltaTime,
+    const sf::RenderWindow& window,
+    std::vector<Entity*>& entities) {
+    auto* transform = player.getComponent<eol::TransformComponent>();
+    auto* playerComp = player.getComponent<eol::PlayerComponent>();
+    auto* collision = player.getComponent<eol::CollisionComponent>();
+    auto* animation = player.getComponent<eol::AnimationComponent>();
+
+    if (!transform || !playerComp) {
+        return;
+    }
+
+    handlePickupDrop(player, entities);
+    playerComp->tickInvulnerability(deltaTime);
+
+    sf::Vector2f movement = getMovementInput();
+    const bool isMoving = (movement.x != 0.f || movement.y != 0.f);
+
+    if (animation) {
+        animation->setAnimation(isMoving ? "walk" : "idle");
+    }
+
+    if (isMoving) {
+        movement = normalizeVector(movement);
+
+        const float speed = playerComp->getMovementSpeed();
+        sf::Vector2f currentPos = transform->getPosition();
+        sf::Vector2f newPos;
+        newPos.x = currentPos.x + movement.x * speed * deltaTime;
+        newPos.y = currentPos.y + movement.y * speed * deltaTime;
+
+        // World bounds
+       
+        const float halfWidth = 32.f;  // Half of player visual size (128 * 0.5 / 2)
+        const float halfHeight = 32.f;
+
+        if (newPos.x < halfWidth) newPos.x = halfWidth;
+        if (newPos.y < halfHeight) newPos.y = halfHeight;
+        if (newPos.x > 800.f - halfWidth) newPos.x = 800.f - halfWidth;  // 768
+        if (newPos.y > 600.f - halfHeight) newPos.y = 600.f - halfHeight; // 568
+
+        // If player has collision component, check before moving
+        if (collision) {
+            sf::Vector2f size = collision->getBoundingBox();
+
+            // Try full movement first
+            if (!CollisionSystem::wouldCollide(newPos, size, entities, &player)) {
+                transform->setPosition(newPos);
+            }
+            // Try horizontal only (wall slide)
+            else if (!CollisionSystem::wouldCollide(
+                sf::Vector2f(newPos.x, currentPos.y), size, entities, &player)) {
+                transform->setPosition(sf::Vector2f(newPos.x, currentPos.y));
+            }
+            // Try vertical only (wall slide)
+            else if (!CollisionSystem::wouldCollide(
+                sf::Vector2f(currentPos.x, newPos.y), size, entities, &player)) {
+                transform->setPosition(sf::Vector2f(currentPos.x, newPos.y));
+            }
+            // Blocked completely - don't move
+        }
+        else {
+            // No collision component, just move
+            transform->setPosition(newPos);
+        }
+    }
+
+    updatePlayerEmitter(player, window);
+
+    if (playerComp->isCarrying()) {
+        Entity* carried = playerComp->getCarriedEntity();
+        if (carried) {
+            if (auto* carriedTransform = carried->getComponent<eol::TransformComponent>()) {
+                // Position mirror slightly in front of player
+                carriedTransform->setPosition(transform->getPosition());
+            }
+        }
+    }
 }
 
 sf::Vector2f InputSystem::getMovementInput() const {
@@ -95,5 +179,41 @@ void InputSystem::updatePlayerEmitter(Entity& player, const sf::RenderWindow& wi
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) ||
         sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
     emitter->setTriggerHeld(triggerHeld);
+}
+
+void InputSystem::handlePickupDrop(Entity& player, std::vector<Entity*>& entities) {
+    bool ePressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E);
+
+    // Only trigger on key press, not hold
+    if (ePressed && !m_pickupKeyWasPressed) {
+        auto* playerComp = player.getComponent<eol::PlayerComponent>();
+        auto* playerTransform = player.getComponent<eol::TransformComponent>();
+        if (!playerComp || !playerTransform) return;
+
+        if (playerComp->isCarrying()) {
+            // Drop the mirror at current position (it's already there)
+            playerComp->setCarriedEntity(nullptr);
+        }
+        else {
+            // Try to pick up nearby mirror
+            sf::Vector2f playerPos = playerTransform->getPosition();
+            const float pickupRange = 60.f;
+
+            for (Entity* entity : entities) {
+                if (!entity) continue;
+                auto* mirror = entity->getComponent<eol::MirrorComponent>();
+                auto* transform = entity->getComponent<eol::TransformComponent>();
+                if (!mirror || !transform || !mirror->isPickable()) continue;
+
+                sf::Vector2f diff = transform->getPosition() - playerPos;
+                float dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
+                if (dist < pickupRange) {
+                    playerComp->setCarriedEntity(entity);
+                    break;
+                }
+            }
+        }
+    }
+    m_pickupKeyWasPressed = ePressed;
 }
 

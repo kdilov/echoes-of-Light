@@ -28,6 +28,8 @@ private:
     Entity createLightSourceNode(const std::string& name,
                                  const sf::Vector2f& position,
                                  bool movable);
+    Entity createWallEntity(const sf::Vector2f& position,
+        const sf::Vector2f& size);
     void handleEvents();
     void update(float deltaTime);
     void render();
