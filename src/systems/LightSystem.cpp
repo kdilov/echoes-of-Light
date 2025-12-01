@@ -7,6 +7,7 @@
 #include "components/PuzzleComponent.h"
 #include "components/RenderComponent.h"
 #include "components/TransformComponent.h"
+#include "GameSettings.h"
 
 #include <algorithm>
 #include <cmath>
@@ -539,8 +540,16 @@ void LightSystem::updateLightFields(std::vector<Entity*>& entities, float deltaT
 }
 
 void LightSystem::ensureOverlaySize(const sf::RenderTarget& target) {
-    const auto size = target.getSize();
-    m_darknessOverlay.setSize(sf::Vector2f(static_cast<float>(size.x), static_cast<float>(size.y)));
+    // Use reference resolution instead of actual window size
+    // The view scales the reference resolution to fit the window,
+    // so the overlay must cover the full reference resolution
+    (void)target;  // Unused 
+
+    m_darknessOverlay.setSize(sf::Vector2f(
+        static_cast<float>(GameSettings::refWidth),
+        static_cast<float>(GameSettings::refHeight)
+    ));
+
     const auto alpha = static_cast<std::uint8_t>(clampf(1.f - m_ambientLight, 0.f, 1.f) * 220.f);
     m_darknessOverlay.setFillColor(sf::Color(5, 5, 15, alpha));
 }

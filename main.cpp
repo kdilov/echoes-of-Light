@@ -4,12 +4,14 @@
 #include "SFML/Graphics.hpp"
 #include "Game.h"
 #include "MainMenu.h"
+#include "GameSettings.h"
 
 
 
 int main() {
 
-    sf::RenderWindow window(sf::VideoMode({ 800, 600 }), "Game");
+    // Create window at Full HD resolution by default
+    sf::RenderWindow window(sf::VideoMode({ GameSettings::refWidth, GameSettings::refHeight }), "Echoes of Light");
 
     
     MainMenu menu;
