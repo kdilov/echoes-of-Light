@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
-
 #include "components/AnimationComponent.h"
 #include "components/CollisionComponent.h"
 #include "components/EnemyAIComponent.h"
@@ -75,6 +74,11 @@ Game::Game()
     , combatSystem_{}
     , enemyAISystem_{}
     , lightSystem_{combatSystem_} {}
+
+void Game::createWindow()  {
+    window_.create(sf::VideoMode({ windowWidth, windowHeight }), windowTitle);
+    window_.setFramerateLimit(framerateLimit);
+}
 
 int Game::run() {
     if (!initialized_ && !initialize()) {
@@ -463,5 +467,31 @@ std::string Game::findResourcePath(const std::string& relativePath) const {
     }
 
     return relativePath;
+}
+
+void Game::setResolution(const sf::Vector2u& res) {
+   
+    currentResolution = res;
+    window_.setSize(res);
+
+    // Reapply frame rate
+    window_.setFramerateLimit(currentFramerate);
+}
+
+sf::Vector2u Game::getResolution() const {
+    return currentResolution;
+}
+
+void Game::setFramerateLimit(unsigned int limit) {
+    currentFramerate = limit;
+    window_.setFramerateLimit(limit);
+}
+
+unsigned int Game::getFramerateLimit() const {
+    return currentFramerate;
+}
+
+sf::RenderWindow& Game::getWindow() {
+    return window_;
 }
 

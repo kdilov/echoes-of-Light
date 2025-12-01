@@ -4,7 +4,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
 #include "Systems.h"
 #include "components/MirrorComponent.h"
 
@@ -13,6 +12,18 @@ public:
     Game();
 
     int run();
+    void createWindow();
+
+    // Resolution control
+    void setResolution(const sf::Vector2u& res);
+    sf::Vector2u getResolution() const;
+
+    // Frame rate control
+    void setFramerateLimit(unsigned int limit);
+    unsigned int getFramerateLimit() const;
+
+    // Access window for menus (optional)
+    sf::RenderWindow& getWindow();
 
 private:
     bool initialize();
@@ -39,6 +50,9 @@ private:
     static constexpr unsigned int windowWidth = 800;
     static constexpr unsigned int windowHeight = 600;
     static constexpr unsigned int framerateLimit = 60;
+
+    sf::Vector2u currentResolution{ windowWidth, windowHeight };
+    unsigned int currentFramerate = framerateLimit;
 
     sf::RenderWindow window_;
     sf::Clock clock_;

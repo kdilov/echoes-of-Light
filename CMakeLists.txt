@@ -21,7 +21,8 @@ link_directories("${CMAKE_BINARY_DIR}/lib/SFML/lib")
 set(EOL_SOURCES
     main.cpp
     src/Game.cpp
-    src/MainMenu.cpp
+    src/Menu.cpp
+    src/OptionsMenu.cpp
     src/components/Component.cpp
     src/components/TransformComponent.cpp
     src/components/RenderComponent.cpp

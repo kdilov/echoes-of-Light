@@ -1,8 +1,13 @@
 #include "SFML/Graphics.hpp"
-#include "MainMenu.h"
+#include "Menu.h"
+#include "OptionsMenu.h"
+#include "Game.h"
 #include <iostream>
 
-MainMenu::MainMenu() {
+
+Menu::Menu(Game& game) : game(game) {
+    
+    window = &game.getWindow();
 
     if (!font.openFromFile("resources/fonts/ScienceGothic.ttf")) {
         std::cout << "Failed to load font!\n";
@@ -25,23 +30,23 @@ MainMenu::MainMenu() {
     buttons[0].setFillColor(sf::Color::Yellow);
 }
 
-void MainMenu::updateVisuals() {
+void Menu::updateVisuals() {
     for (int i = 0; i < buttons.size(); i++) {
         buttons[i].setFillColor(i == selectedIndex ? sf::Color::Yellow : sf::Color::White);
     }
 }
 
-int MainMenu::run(sf::RenderWindow& window) {
+int Menu::run() {
     const auto buttonCount = static_cast<int>(buttons.size());
     if (buttonCount == 0) {
         return 2;
     }
 
-    while (window.isOpen()) {
+    while (window->isOpen()) {
 
-        while (const auto event = window.pollEvent()) {
+        while (const auto event = window->pollEvent()) {
             if (event->is<sf::Event::Closed>()) {
-                window.close();
+                window->close();
                 return 2;
             }
 
@@ -55,8 +60,9 @@ int MainMenu::run(sf::RenderWindow& window) {
                     selectedIndex = (selectedIndex + 1) % buttonCount;
                     updateVisuals();
                     break;
+
                 case sf::Keyboard::Key::Enter:
-                    return selectedIndex;
+                    return choice(selectedIndex);
                 case sf::Keyboard::Key::Escape:
                     return 2;
                 default:
@@ -65,17 +71,32 @@ int MainMenu::run(sf::RenderWindow& window) {
             }
         }
 
-        window.clear();
-        draw(window);
-        window.display();
+        window->clear();
+        draw();
+        window->display();
     }
 
     return 2; // Quit by default
 }
 
+int Menu::choice(int selectedIndex) {
+    
+    if (selectedIndex == 0) {
+        Game game;
+        return game.run();
+    }
+    else if (selectedIndex == 1) {
+        OptionsMenu options(game);
+        return options.run();
+    }
+    else {
+        return 0;
+        // Quit the game
+    }
+}
 
-void MainMenu::draw(sf::RenderWindow& window) {
+void Menu::draw() {
     for (auto& b : buttons)
-        window.draw(b);
+        window->draw(b);
 }
 

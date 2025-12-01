@@ -3,29 +3,20 @@
 
 #include "SFML/Graphics.hpp"
 #include "Game.h"
-#include "MainMenu.h"
+#include "Menu.h"
+#include "OptionsMenu.h"
 
 
 
 int main() {
 
-    sf::RenderWindow window(sf::VideoMode({ 800, 600 }), "Game");
+    sf::RenderWindow window(sf::VideoMode({ 800, 600 }), "Echoes of Wisdom");
 
-    
-    MainMenu menu;
+    Game game;
+    game.createWindow();
+    Menu menu(game);
+    menu.run();
+    return 0;
 
-    int choice = menu.run(window);
 
-    if (choice == 0) {
-        Game game;
-        return game.run();
-    }
-    else if(choice == 1){
-        // Options menu to be implemented
-        return 0;
-    }
-    else {
-        return 0;
-        // Quit the game
-    }
 }
