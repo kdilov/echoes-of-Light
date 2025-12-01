@@ -7,6 +7,7 @@
 #include "components/TransformComponent.h"
 #include "components/CollisionComponent.h"
 #include "components/MirrorComponent.h"
+#include "GameSettings.h"
 
 #include <cmath>
 
@@ -46,10 +47,8 @@ void InputSystem::update(Entity& player, float deltaTime, const sf::RenderWindow
         pos.x += movement.x * speed * deltaTime;
         pos.y += movement.y * speed * deltaTime;
 
-        if (pos.x < 32.f) pos.x = 32.f;
-        if (pos.y < 32.f) pos.y = 32.f;
-        if (pos.x > 768.f) pos.x = 768.f;
-        if (pos.y > 568.f) pos.y = 568.f;
+        // Clamp to world bounds using GameSettings
+        pos = GameSettings::clampToWorld(pos, 0.025f);
 
         transform->setPosition(pos);
     }
@@ -90,15 +89,8 @@ void InputSystem::updateWithCollision(Entity& player,
         newPos.x = currentPos.x + movement.x * speed * deltaTime;
         newPos.y = currentPos.y + movement.y * speed * deltaTime;
 
-        // World bounds
-       
-        const float halfWidth = 32.f;  // Half of player visual size (128 * 0.5 / 2)
-        const float halfHeight = 32.f;
-
-        if (newPos.x < halfWidth) newPos.x = halfWidth;
-        if (newPos.y < halfHeight) newPos.y = halfHeight;
-        if (newPos.x > 800.f - halfWidth) newPos.x = 800.f - halfWidth;  // 768
-        if (newPos.y > 600.f - halfHeight) newPos.y = 600.f - halfHeight; // 568
+        // Clamp to world bounds using GameSettings
+        newPos = GameSettings::clampToWorld(newPos, 0.025f);
 
         // If player has collision component, check before moving
         if (collision) {
@@ -197,7 +189,7 @@ void InputSystem::handlePickupDrop(Entity& player, std::vector<Entity*>& entitie
         else {
             // Try to pick up nearby mirror
             sf::Vector2f playerPos = playerTransform->getPosition();
-            const float pickupRange = 60.f;
+            const float pickupRange = GameSettings::relativeMin(0.083f);
 
             for (Entity* entity : entities) {
                 if (!entity) continue;
