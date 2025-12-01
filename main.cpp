@@ -5,12 +5,13 @@
 #include "Game.h"
 #include "Menu.h"
 #include "OptionsMenu.h"
-
+#include "GameSettings.h"
 
 
 int main() {
 
-    sf::RenderWindow window(sf::VideoMode({ 800, 600 }), "Echoes of Wisdom");
+    // Create window at Full HD resolution by default
+    sf::RenderWindow window(sf::VideoMode({ GameSettings::refWidth, GameSettings::refHeight }), "Echoes of Light");
 
     Game game;
     game.createWindow();

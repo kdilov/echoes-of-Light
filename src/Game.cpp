@@ -19,6 +19,7 @@
 #include "components/RenderComponent.h"
 #include "components/TransformComponent.h"
 #include "components/UpgradeComponent.h"
+#include "GameSettings.h"
 
 namespace {
     constexpr char windowTitle[] = "Echoes of Light";
@@ -62,10 +63,12 @@ sf::Image createCircularFalloffImage(unsigned int size,
 
 Game::Game()
     : window_{}
+    , gameView_{}
     , clock_{}
     , idleTexture_{}
     , moveTexture_{}
     , initialized_{false}
+    , currentResolutionIndex_{ 0 }
     , player_{}
     , lightBeacon_{}
     , enemy_{}
@@ -97,12 +100,18 @@ int Game::run() {
 }
 
 bool Game::initialize() {
-    window_.create(sf::VideoMode({ windowWidth, windowHeight }), windowTitle);
+    // Create window at default resolution
+    window_.create(sf::VideoMode({ defaultWindowWidth, defaultWindowHeight }), windowTitle);
     window_.setFramerateLimit(framerateLimit);
+
+    // Set up the scaled view - this maps the reference resolution to the window
+    gameView_ = GameSettings::getScaledView(window_.getSize());
+    window_.setView(gameView_);
 
     
 
     std::cout << "=== ECHOES OF LIGHT ===" << std::endl;
+    std::cout << "Reference resolution: " << GameSettings::refWidth << "x" << GameSettings::refHeight << std::endl;
 
     if (!loadResources()) {
         return false;
@@ -111,11 +120,35 @@ bool Game::initialize() {
     createEntities();
     clock_.restart();
 
-    std::cout << "Controls: WASD to move, ESC to exit" << std::endl;
-    std::cout << "Animation system active!" << std::endl;
+    std::cout << "Controls: WASD to move, E to pickup/drop mirrors, ESC to exit" << std::endl;
+    std::cout << "Press F1/F2/F3 to change resolution" << std::endl;
 
     initialized_ = true;
     return true;
+}
+
+void Game::setResolution(unsigned int index) {
+    const auto& resolutions = GameSettings::getAvailableResolutions();
+    if (index >= resolutions.size()) {
+        return;
+    }
+
+    const auto& res = resolutions[index];
+    currentResolutionIndex_ = index;
+
+    // Recreate window at new resolution
+    window_.create(sf::VideoMode({ res.width, res.height }), windowTitle);
+    window_.setFramerateLimit(framerateLimit);
+
+    // Update the view to scale properly
+    gameView_ = GameSettings::getScaledView(window_.getSize());
+    window_.setView(gameView_);
+
+    std::cout << "Resolution changed to: " << res.label << std::endl;
+}
+
+unsigned int Game::getCurrentResolutionIndex() const noexcept {
+    return currentResolutionIndex_;
 }
 
 bool Game::loadResources() {
@@ -159,52 +192,97 @@ void Game::createEntities() {
     entities_.push_back(&enemy_);
 
     worldObjects_.clear();
-    worldObjects_.reserve(4);
+    worldObjects_.reserve(12);
 
     auto addWorldEntity = [this](Entity&& entity) {
         auto handle = std::make_unique<Entity>();
         *handle = std::move(entity);
         entities_.push_back(handle.get());
         worldObjects_.push_back(std::move(handle));
-    };
+        };
 
-    addWorldEntity(createMirrorEntity(sf::Vector2f{520.f, 280.f},
-                                      sf::Vector2f{-1.f, 1.f},
-                                      sf::Vector2f{68.f, 18.f},
-                                      eol::MirrorComponent::MirrorType::Prism));
-    addWorldEntity(createMirrorEntity(sf::Vector2f{360.f, 180.f},
-                                      sf::Vector2f{1.f, 1.f},
-                                      sf::Vector2f{50.f, 16.f},
-                                      eol::MirrorComponent::MirrorType::Splitter));
-    addWorldEntity(createMirrorEntity(sf::Vector2f{400.f, 300.f},
-                                        sf::Vector2f{1.f, 1.f},
-                                        sf::Vector2f{50.f, 16.f},
-                                        eol::MirrorComponent::MirrorType::Flat));
-    addWorldEntity(createLightSourceNode("PrismNode", sf::Vector2f{260.f, 360.f}, true));
-    addWorldEntity(createLightSourceNode("AccessLight", sf::Vector2f{700.f, 420.f}, false));
-    
-    // Test walls for collision
-    addWorldEntity(createWallEntity(sf::Vector2f{ 400.f, 100.f }, sf::Vector2f{ 200.f, 20.f }));
-    addWorldEntity(createWallEntity(sf::Vector2f{ 100.f, 300.f }, sf::Vector2f{ 20.f, 150.f }));
-    addWorldEntity(createWallEntity(sf::Vector2f{ 600.f, 450.f }, sf::Vector2f{ 50.f, 50.f }));
-    addWorldEntity(createWallEntity(sf::Vector2f{ 200.f, 520.f }, sf::Vector2f{ 100.f, 20.f }));
-    addWorldEntity(createWallEntity(sf::Vector2f{ 290.f, 470.f }, sf::Vector2f{ 20.f, 80.f }));
+    // ========== MIRRORS ==========
+    // Positions expressed as percentages of screen (0.0 - 1.0)
+
+    // Prism mirror - right side of screen, slightly above center
+    addWorldEntity(createMirrorEntity(
+        GameSettings::relativePos(0.65f, 0.47f),
+        sf::Vector2f{ -1.f, 1.f },
+        GameSettings::relativeSize(0.07f, 0.033f),
+        eol::MirrorComponent::MirrorType::Prism));
+
+    // Splitter mirror - center-left, upper area
+    addWorldEntity(createMirrorEntity(
+        GameSettings::relativePos(0.45f, 0.30f),
+        sf::Vector2f{ 1.f, 1.f },
+        GameSettings::relativeSize(0.052f, 0.03f),
+        eol::MirrorComponent::MirrorType::Splitter));
+
+    // Flat mirror - center of screen
+    addWorldEntity(createMirrorEntity(
+        GameSettings::relativePos(0.50f, 0.50f),
+        sf::Vector2f{ 1.f, 1.f },
+        GameSettings::relativeSize(0.052f, 0.03f),
+        eol::MirrorComponent::MirrorType::Flat));
+
+    // ========== LIGHT SOURCES ==========
+    addWorldEntity(createLightSourceNode(
+        "PrismNode",
+        GameSettings::relativePos(0.325f, 0.60f),
+        true));
+
+    addWorldEntity(createLightSourceNode(
+        "AccessLight",
+        GameSettings::relativePos(0.875f, 0.70f),
+        false));
+
+    // ========== WALLS ==========
+    addWorldEntity(createWallEntity(
+        GameSettings::relativePos(0.50f, 0.167f),
+        GameSettings::relativeSize(0.25f, 0.037f)));
+
+    addWorldEntity(createWallEntity(
+        GameSettings::relativePos(0.125f, 0.50f),
+        GameSettings::relativeSize(0.021f, 0.25f)));
+
+    addWorldEntity(createWallEntity(
+        GameSettings::relativePos(0.75f, 0.75f),
+        GameSettings::relativeSize(0.0625f, 0.111f)));
+
+    addWorldEntity(createWallEntity(
+        GameSettings::relativePos(0.25f, 0.867f),
+        GameSettings::relativeSize(0.125f, 0.037f)));
+
+    addWorldEntity(createWallEntity(
+        GameSettings::relativePos(0.3625f, 0.783f),
+        GameSettings::relativeSize(0.021f, 0.133f)));
+
+    addWorldEntity(createWallEntity(
+        GameSettings::relativePos(0.833f, 0.37f),
+        GameSettings::relativeSize(0.021f, 0.278f)));
+
+    addWorldEntity(createWallEntity(
+        GameSettings::relativePos(0.417f, 0.694f),
+        GameSettings::relativeSize(0.156f, 0.037f)));
+
 }
 
 Entity Game::createPlayerEntity() {
     Entity entity;
     entity.name = "Player";
 
+    // Player starts at center of screen
     entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
-        sf::Vector2f{ 400.f, 300.f },
-        sf::Vector2f{ 0.5f, 0.5f },
+        GameSettings::center(),
+        sf::Vector2f{ 0.75f, 0.75f },
         0.f));
 
     entity.components.emplace_back(std::make_unique<eol::RenderComponent>());
     entity.components.emplace_back(std::make_unique<eol::PlayerComponent>());
 
+    // Collision box - relative to screen size
     auto collision = std::make_unique<eol::CollisionComponent>();
-    collision->setBoundingBox(sf::Vector2f{ 28.f, 28.f });
+    collision->setBoundingBox(GameSettings::relativeSize(0.022f, 0.039f));
     collision->setSolid(true);
     entity.components.emplace_back(std::move(collision));
 
@@ -234,12 +312,14 @@ Entity Game::createPlayerEntity() {
     entity.components.emplace_back(std::move(animationComponent));
 
     entity.components.emplace_back(std::make_unique<eol::LightComponent>());
+
     auto emitter = std::make_unique<eol::LightEmitterComponent>();
-    emitter->setBeamLength(640.f);
-    emitter->setBeamWidth(12.f);
+    emitter->setBeamLength(GameSettings::relativeX(0.625f));
+    emitter->setBeamWidth(GameSettings::relativeMin(0.015f));
     emitter->setDamage(50.f);
     emitter->setMaxReflections(4);
     entity.components.emplace_back(std::move(emitter));
+
     entity.components.emplace_back(std::make_unique<eol::UpgradeComponent>());
 
     return entity;
@@ -248,9 +328,10 @@ Entity Game::createPlayerEntity() {
 Entity Game::createLightBeaconEntity() {
     Entity entity;
     entity.name = "LightBeacon";
+
     entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
-        sf::Vector2f{640.f, 140.f},
-        sf::Vector2f{0.45f, 0.45f},
+        GameSettings::relativePos(0.80f, 0.233f),
+        sf::Vector2f{ 0.65f, 0.65f },
         0.f));
 
     auto lightSource = std::make_unique<eol::LightSourceComponent>();
@@ -264,7 +345,7 @@ Entity Game::createLightBeaconEntity() {
     entity.components.emplace_back(std::move(puzzle));
 
     auto beaconLight = std::make_unique<eol::LightComponent>();
-    beaconLight->setRadius(220.f);
+    beaconLight->setRadius(GameSettings::relativeMin(0.324f));
     beaconLight->setBaseIntensity(0.2f);
     entity.components.emplace_back(std::move(beaconLight));
 
@@ -275,41 +356,44 @@ Entity Game::createLightBeaconEntity() {
 Entity Game::createEnemyEntity() {
     Entity entity;
     entity.name = "Enemy";
+
     entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
-        sf::Vector2f{520.f, 320.f},
-        sf::Vector2f{1.f, 1.f},
+        GameSettings::relativePos(0.65f, 0.533f),
+        sf::Vector2f{ 1.5f, 1.5f },
         0.f));
+
     entity.components.emplace_back(std::make_unique<eol::EnemyComponent>());
 
     auto render = std::make_unique<eol::RenderComponent>();
     sf::Sprite& sprite = render->getSprite();
     sprite.setTexture(debugWhiteTexture_);
-    sprite.setTextureRect(sf::IntRect(sf::Vector2i{0, 0}, sf::Vector2i{1, 1}));
-    sprite.setOrigin(sf::Vector2f{0.5f, 0.5f});
-    sprite.setScale(sf::Vector2f{28.f, 36.f});
+    sprite.setTextureRect(sf::IntRect(sf::Vector2i{ 0, 0 }, sf::Vector2i{ 1, 1 }));
+    sprite.setOrigin(sf::Vector2f{ 0.5f, 0.5f });
+    sf::Vector2f enemySize = GameSettings::relativeSize(0.022f, 0.05f);
+    sprite.setScale(enemySize);
     render->setTint(sf::Color(255, 110, 110, 240));
     entity.components.emplace_back(std::move(render));
 
     auto enemyLight = std::make_unique<eol::LightComponent>();
     enemyLight->setBaseIntensity(0.15f);
-    enemyLight->setRadius(110.f);
+    enemyLight->setRadius(GameSettings::relativeMin(0.167f));
     entity.components.emplace_back(std::move(enemyLight));
 
     auto melee = std::make_unique<eol::MeleeAttackComponent>();
     melee->setDamage(22.f);
-    melee->setRange(60.f);
+    melee->setRange(GameSettings::relativeMin(0.083f));
     melee->setCooldown(1.2f);
     entity.components.emplace_back(std::move(melee));
 
     auto ai = std::make_unique<eol::EnemyAIComponent>();
-    const sf::Vector2f basePos{520.f, 320.f};
+    const sf::Vector2f basePos = GameSettings::relativePos(0.65f, 0.533f);
     ai->setPatrolPoints({
         basePos,
-        basePos + sf::Vector2f{-140.f, 0.f}
-    });
-    ai->setDetectionRange(260.f);
-    ai->setAttackRange(10.f);
-    ai->setMoveSpeed(30.f);
+        basePos + sf::Vector2f{-GameSettings::relativeX(0.175f), 0.f}
+        });
+    ai->setDetectionRange(GameSettings::relativeMin(0.37f));
+    ai->setAttackRange(GameSettings::relativeMin(0.014f));
+    ai->setMoveSpeed(GameSettings::relativeMin(0.046f));
     entity.components.emplace_back(std::move(ai));
 
     return entity;
@@ -364,7 +448,7 @@ Entity Game::createLightSourceNode(const std::string& name,
     entity.name = name;
     entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
         position,
-        sf::Vector2f{0.65f, 0.65f},
+        sf::Vector2f{1.0f, 1.0f},
         0.f));
 
     auto source = std::make_unique<eol::LightSourceComponent>();
@@ -374,7 +458,7 @@ Entity Game::createLightSourceNode(const std::string& name,
     entity.components.emplace_back(std::move(source));
 
     auto light = std::make_unique<eol::LightComponent>();
-    light->setRadius(180.f);
+    light->setRadius(GameSettings::relativeMin(0.259f));
     light->setBaseIntensity(0.6f);
     entity.components.emplace_back(std::move(light));
 
@@ -426,8 +510,22 @@ void Game::handleEvents() {
         }
 
         if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-            if (keyPressed->code == sf::Keyboard::Key::Escape) {
+            switch (keyPressed->code) {
+            case sf::Keyboard::Key::Escape:
                 window_.close();
+                break;
+                // Resolution hotkeys
+            case sf::Keyboard::Key::F1:
+                setResolution(0);  // 1920x1080
+                break;
+            case sf::Keyboard::Key::F2:
+                setResolution(1);  // 1280x720
+                break;
+            case sf::Keyboard::Key::F3:
+                setResolution(2);  // 800x600
+                break;
+            default:
+                break;
             }
         }
     }
@@ -446,6 +544,8 @@ void Game::update(float deltaTime) {
 
 void Game::render() {
     window_.clear(sf::Color(20, 20, 30));
+    // Make sure the scaled view is active
+    window_.setView(gameView_);
     renderSystem_.render(window_, entities_);
     lightSystem_.render(window_, entities_);
 

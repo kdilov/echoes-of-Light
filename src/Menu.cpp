@@ -1,5 +1,6 @@
 #include "SFML/Graphics.hpp"
 #include "Menu.h"
+#include "GameSettings.h"
 #include "OptionsMenu.h"
 #include "Game.h"
 #include <iostream>
@@ -22,8 +23,8 @@ Menu::Menu(Game& game) : game(game) {
     for (int i = 0; i < labels.size(); i++) {
         sf::Text text(font);
         text.setString(labels[i]);
-        text.setCharacterSize(40);
-        text.setPosition(sf::Vector2f(200.f, 200.f + i * 60.f));
+        text.setCharacterSize(72);
+        text.setPosition(GameSettings::relativePos(0.25f, 0.33f + static_cast<float>(i) * 0.11f));
         buttons.push_back(text);
     }
 
@@ -42,7 +43,11 @@ int Menu::run() {
         return 2;
     }
 
-    while (window->isOpen()) {
+    // Set up scaled view for the menu
+    sf::View menuView = GameSettings::getScaledView(window.getSize());
+    window.setView(menuView);
+
+    while (window.isOpen()) {
 
         while (const auto event = window->pollEvent()) {
             if (event->is<sf::Event::Closed>()) {
@@ -71,9 +76,11 @@ int Menu::run() {
             }
         }
 
-        window->clear();
-        draw();
-        window->display();
+        
+    
+        window.clear();
+        draw(window);
+        window.display();
     }
 
     return 2; // Quit by default
@@ -95,8 +102,24 @@ int Menu::choice(int selectedIndex) {
     }
 }
 
-void Menu::draw() {
-    for (auto& b : buttons)
-        window->draw(b);
-}
+void MainMenu::draw(sf::RenderWindow& window) {
+    // Draw title
+    sf::Text title(font);
+    title.setString("ECHOES OF LIGHT");
+    title.setCharacterSize(96);
+    title.setFillColor(sf::Color(255, 230, 160));
+    title.setPosition(GameSettings::relativePos(0.25f, 0.14f));
+    window.draw(title);
 
+    // Draw menu buttons
+    for (auto& b : buttons)
+        window.draw(b);
+
+    // Draw resolution hint
+    sf::Text hint(font);
+    hint.setString("Press F1/F2/F3 in game to change resolution");
+    hint.setCharacterSize(28);
+    hint.setFillColor(sf::Color(150, 150, 150));
+    hint.setPosition(GameSettings::relativePos(0.25f, 0.83f));
+    window.draw(hint);
+}

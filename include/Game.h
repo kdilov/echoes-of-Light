@@ -6,6 +6,7 @@
 #include <vector>
 #include "Systems.h"
 #include "components/MirrorComponent.h"
+#include "GameSettings.h"
 
 class Game {
 public:
@@ -24,6 +25,10 @@ public:
 
     // Access window for menus (optional)
     sf::RenderWindow& getWindow();
+
+    // Resolution management
+    void setResolution(unsigned int index);
+    unsigned int getCurrentResolutionIndex() const noexcept;
 
 private:
     bool initialize();
@@ -47,21 +52,24 @@ private:
     std::string findResourcePath(const std::string& relativePath) const;
 
 private:
-    static constexpr unsigned int windowWidth = 800;
-    static constexpr unsigned int windowHeight = 600;
+    // Window defaults to Full HD, uses reference resolution via view scaling
+    static constexpr unsigned int defaultWindowWidth = GameSettings::refWidth;
+    static constexpr unsigned int defaultWindowHeight = GameSettings::refHeight;
     static constexpr unsigned int framerateLimit = 60;
 
     sf::Vector2u currentResolution{ windowWidth, windowHeight };
     unsigned int currentFramerate = framerateLimit;
 
     sf::RenderWindow window_;
+    sf::View gameView_;
     sf::Clock clock_;
-
     sf::Texture idleTexture_;
     sf::Texture moveTexture_;
     sf::Texture debugWhiteTexture_;
     sf::Texture lightNodeTexture_;
     bool initialized_;
+
+    unsigned int currentResolutionIndex_{ 0 };
 
     Entity player_;
     Entity lightBeacon_;
