@@ -66,6 +66,7 @@ public:
 
 private:
     void updateSpriteFromComponents(sf::Sprite& sprite, Entity& entity);
+    void drawEnemyHealthBar(sf::RenderWindow& window, Entity& entity);
 };
 
 // COMBAT SYSTEM - Handles HP, resistances and hit reactions
@@ -90,15 +91,26 @@ private:
     void driveBehavior(Entity& entity,
                        eol::EnemyAIComponent& ai,
                        const sf::Vector2f& playerPos,
-                       float deltaTime);
+                       float deltaTime,
+                       std::vector<Entity*>& entities);
     void executePatrol(Entity& entity,
                        eol::EnemyAIComponent& ai,
-                       float deltaTime);
+                       float deltaTime,
+                       std::vector<Entity*>& entities);
     void executeChase(Entity& entity,
                       const eol::EnemyAIComponent& ai,
                       const sf::Vector2f& playerPos,
-                      float deltaTime);
+                      float deltaTime,
+                      std::vector<Entity*>& entities);
     void executeAttack(Entity& entity);
+    bool hasLineOfSight(const sf::Vector2f& origin,
+                        const sf::Vector2f& target,
+                        const std::vector<Entity*>& entities,
+                        Entity* self,
+                        Entity* targetEntity) const;
+    bool lineIntersectsRect(const sf::Vector2f& a,
+                            const sf::Vector2f& b,
+                            const sf::FloatRect& rect) const;
 };
 
 
