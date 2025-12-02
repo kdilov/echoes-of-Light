@@ -11,14 +11,12 @@ protected:
     sf::Font font;
     std::vector<sf::Text> buttons;
     int selectedIndex = 0;
-    sf::RenderWindow* window;
     Game& game;
     void updateVisuals();
 
 public:
     Menu(Game& game);
     virtual int run();
-    virtual void update(float dt)  {}
     virtual void draw();
     int choice(int selectedIndex);
   

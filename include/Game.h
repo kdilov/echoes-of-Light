@@ -1,5 +1,4 @@
 #pragma once
-
 #include <SFML/Graphics.hpp>
 #include <memory>
 #include <string>
@@ -8,16 +7,12 @@
 #include "components/MirrorComponent.h"
 #include "GameSettings.h"
 
+
 class Game {
 public:
     Game();
-
+    bool initialize();
     int run();
-    void createWindow();
-
-    // Resolution control
-    void setResolution(const sf::Vector2u& res);
-    sf::Vector2u getResolution() const;
 
     // Frame rate control
     void setFramerateLimit(unsigned int limit);
@@ -31,7 +26,7 @@ public:
     unsigned int getCurrentResolutionIndex() const noexcept;
 
 private:
-    bool initialize();
+    
     bool loadResources();
     void createEntities();
     Entity createPlayerEntity();
@@ -57,7 +52,7 @@ private:
     static constexpr unsigned int defaultWindowHeight = GameSettings::refHeight;
     static constexpr unsigned int framerateLimit = 60;
 
-    sf::Vector2u currentResolution{ windowWidth, windowHeight };
+    sf::Vector2u currentResolution {defaultWindowWidth, defaultWindowHeight};
     unsigned int currentFramerate = framerateLimit;
 
     sf::RenderWindow window_;
