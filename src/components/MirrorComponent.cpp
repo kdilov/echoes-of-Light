@@ -62,6 +62,14 @@ bool MirrorComponent::isActive() const noexcept {
     return m_active;
 }
 
+void MirrorComponent::setPickable(bool pickable) noexcept {
+    m_pickable = pickable;
+}
+
+bool MirrorComponent::isPickable() const noexcept {
+    return m_pickable;
+}
+
 } // namespace eol
 
 

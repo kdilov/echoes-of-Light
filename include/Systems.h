@@ -12,7 +12,7 @@
 #include "components/EnemyAIComponent.h"
 #include "components/LightEmitterComponent.h"
 
-// Simple Entity structure (same as before)
+// Simple Entity structure 
 struct Entity {
     std::string name;
     std::vector<eol::ComponentPtr> components;
@@ -39,9 +39,18 @@ class InputSystem {
 public:
     void update(Entity& player, float deltaTime, const sf::RenderWindow& window);
 
+    // Updated with collision checking 
+    void updateWithCollision(Entity& player,
+        float deltaTime,
+        const sf::RenderWindow& window,
+        std::vector<Entity*>& entities);
+
 private:
     sf::Vector2f getMovementInput() const;
     void updatePlayerEmitter(Entity& player, const sf::RenderWindow& window);
+
+    void handlePickupDrop(Entity& player, std::vector<Entity*>& entities);
+    bool m_pickupKeyWasPressed{ false };
 };
 
 // ANIMATION SYSTEM - Updates all entity animations

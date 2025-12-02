@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+struct Entity;
+
 namespace eol {
 
 class PlayerComponent : public Component {
@@ -31,6 +33,9 @@ public:
     void setInvulnerability(float duration) noexcept;
     bool isInvulnerable() const noexcept;
     void tickInvulnerability(float deltaTime) noexcept;
+    void setCarriedEntity(Entity* entity) noexcept { m_carriedEntity = entity; }
+    Entity* getCarriedEntity() const noexcept { return m_carriedEntity; }
+    bool isCarrying() const noexcept { return m_carriedEntity != nullptr; }
 
 private:
     float m_movementSpeed{120.f};
@@ -40,6 +45,8 @@ private:
     float m_health{100.f};
     float m_maxHealth{100.f};
     float m_invulnerabilityTimer{0.f};
+
+    Entity* m_carriedEntity{ nullptr };
 };
 
 } // namespace eol

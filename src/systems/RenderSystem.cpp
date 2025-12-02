@@ -30,6 +30,9 @@ void RenderSystem::updateSpriteFromComponents(sf::Sprite& sprite, Entity& entity
         if (const sf::Texture* texture = animation->getCurrentTexture()) {
             sprite.setTexture(*texture, false);
             sprite.setTextureRect(animation->getCurrentFrameRect());
+
+            sf::IntRect frameRect = animation->getCurrentFrameRect();
+            sprite.setOrigin(sf::Vector2f(frameRect.size.x / 2.f, frameRect.size.y / 2.f));
         }
     }
 

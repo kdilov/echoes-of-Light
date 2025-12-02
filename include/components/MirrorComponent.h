@@ -31,12 +31,17 @@ public:
     void setActive(bool active) noexcept;
     bool isActive() const noexcept;
 
+    void setPickable(bool pickable) noexcept;
+    bool isPickable() const noexcept;
+
 private:
     sf::Vector2f m_normal;
     sf::Vector2f m_size;
     float m_reflectionLoss;
     MirrorType m_type;
     bool m_active;
+
+    bool m_pickable{ true };
 };
 
 } // namespace eol
