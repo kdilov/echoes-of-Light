@@ -6,6 +6,7 @@
 #include "Systems.h"
 #include "components/MirrorComponent.h"
 #include "GameSettings.h"
+#include "systems/DialogSystem.h"
 
 
 class Game
@@ -72,6 +73,10 @@ private:
 
     
     unsigned int currentFramerate;
+
+    // Dialog system
+    sf::Font gameFont_;
+    DialogSystem dialogSystem_;
 };
 
 

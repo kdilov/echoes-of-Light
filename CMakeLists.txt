@@ -50,6 +50,7 @@ set(EOL_SOURCES
     src/systems/EnemyAISystem.cpp
     src/systems/LightSystem.cpp
     src/systems/CollisionSystem.cpp 
+    src/systems/DialogSystem.cpp
   
     
 )
