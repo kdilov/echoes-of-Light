@@ -67,6 +67,7 @@ public:
 private:
     void updateSpriteFromComponents(sf::Sprite& sprite, Entity& entity);
     void drawEnemyHealthBar(sf::RenderWindow& window, Entity& entity);
+    void drawPlayerHealthBar(sf::RenderWindow& window, Entity& player);
 };
 
 // COMBAT SYSTEM - Handles HP, resistances and hit reactions

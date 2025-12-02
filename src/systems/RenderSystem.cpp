@@ -2,6 +2,7 @@
 
 #include "components/AnimationComponent.h"
 #include "components/EnemyComponent.h"
+#include "components/PlayerComponent.h"
 #include "components/RenderComponent.h"
 #include "components/TransformComponent.h"
 
@@ -9,6 +10,7 @@
 #include <algorithm>
 
 void RenderSystem::render(sf::RenderWindow& window, std::vector<Entity*>& entities) {
+    Entity* player = nullptr;
     for (Entity* entity : entities) {
         if (!entity) continue;
 
@@ -21,6 +23,14 @@ void RenderSystem::render(sf::RenderWindow& window, std::vector<Entity*>& entiti
         updateSpriteFromComponents(sprite, *entity);
         window.draw(sprite);
         drawEnemyHealthBar(window, *entity);
+
+        if (entity->name == "Player") {
+            player = entity;
+        }
+    }
+
+    if (player) {
+        drawPlayerHealthBar(window, *player);
     }
 }
 
@@ -77,6 +87,36 @@ void RenderSystem::drawEnemyHealthBar(sf::RenderWindow& window, Entity& entity) 
     health.setOrigin(sf::Vector2f(barWidth * 0.5f, (barHeight - 2.f) * 0.5f));
     health.setPosition(barPosition);
     health.setFillColor(sf::Color(255, 90, 90, 240));
+    window.draw(health);
+}
+
+void RenderSystem::drawPlayerHealthBar(sf::RenderWindow& window, Entity& player) {
+    auto* stats = player.getComponent<eol::PlayerComponent>();
+    if (!stats) {
+        return;
+    }
+
+    const float healthRatio = std::clamp(
+        stats->getHealth() / std::max(1.f, stats->getMaxHealth()),
+        0.f,
+        1.f);
+
+    const float barWidth = 260.f;
+    const float barHeight = 18.f;
+    const float margin = 20.f;
+
+    sf::Vector2f origin{ margin, margin };
+
+    sf::RectangleShape background(sf::Vector2f(barWidth, barHeight));
+    background.setPosition(origin);
+    background.setFillColor(sf::Color(10, 10, 20, 220));
+    background.setOutlineColor(sf::Color(0, 0, 0, 240));
+    background.setOutlineThickness(2.f);
+    window.draw(background);
+
+    sf::RectangleShape health(sf::Vector2f(barWidth * healthRatio, barHeight - 4.f));
+    health.setPosition(origin + sf::Vector2f(2.f, 2.f));
+    health.setFillColor(sf::Color(120, 255, 160, 240));
     window.draw(health);
 }
 
