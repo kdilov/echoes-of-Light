@@ -3,10 +3,6 @@
 #include <memory>
 #include "Scene.h"
 
-
-
-
-
 class SceneStack
 {
 public:
