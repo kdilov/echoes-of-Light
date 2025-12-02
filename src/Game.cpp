@@ -8,6 +8,7 @@
 #include "components/CollisionComponent.h"
 #include "components/EnemyAIComponent.h"
 #include "components/EnemyComponent.h"
+#include "components/HitboxComponent.h"
 #include "components/LightComponent.h"
 #include "components/LightEmitterComponent.h"
 #include "components/LightSourceComponent.h"
@@ -329,6 +330,10 @@ Entity Game::createEnemyEntity()
         sf::Vector2f{ 1.5f, 1.5f },
         0.f));
 
+    auto hitbox = std::make_unique<eol::HitboxComponent>();
+    hitbox->setSize(GameSettings::relativeSize(0.06f, 0.1f));
+    e.components.emplace_back(std::move(hitbox));
+
     e.components.emplace_back(std::make_unique<eol::EnemyComponent>());
 
     auto render = std::make_unique<eol::RenderComponent>();
@@ -339,11 +344,6 @@ Entity Game::createEnemyEntity()
     sprite.setScale(GameSettings::relativeSize(0.022f, 0.05f));
     render->setTint(sf::Color(255, 110, 110, 240));
     e.components.emplace_back(std::move(render));
-
-    auto light = std::make_unique<eol::LightComponent>();
-    light->setBaseIntensity(0.15f);
-    light->setRadius(GameSettings::relativeMin(0.167f));
-    e.components.emplace_back(std::move(light));
 
     auto melee = std::make_unique<eol::MeleeAttackComponent>();
     melee->setDamage(22.f);

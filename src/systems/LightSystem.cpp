@@ -1,5 +1,6 @@
 #include "Systems.h"
 
+#include "components/HitboxComponent.h"
 #include "components/LightComponent.h"
 #include "components/LightEmitterComponent.h"
 #include "components/LightSourceComponent.h"
@@ -447,6 +448,16 @@ std::optional<sf::FloatRect> LightSystem::computeMirrorBounds(Entity& entity) co
 std::optional<sf::FloatRect> LightSystem::computeBounds(Entity& entity) const {
     if (auto mirrorBounds = computeMirrorBounds(entity)) {
         return mirrorBounds;
+    }
+
+    if (auto* hitbox = entity.getComponent<eol::HitboxComponent>()) {
+        if (auto* transform = entity.getComponent<eol::TransformComponent>()) {
+            const sf::Vector2f pos = transform->getPosition();
+            const sf::Vector2f size = hitbox->getSize();
+            return sf::FloatRect(
+                sf::Vector2f{pos.x - size.x * 0.5f, pos.y - size.y * 0.5f},
+                size);
+        }
     }
 
     if (auto* render = entity.getComponent<eol::RenderComponent>()) {

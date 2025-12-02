@@ -34,6 +34,7 @@ set(EOL_SOURCES
     src/components/EnemyAIComponent.cpp
     src/components/LightComponent.cpp
     src/components/LightEmitterComponent.cpp
+    src/components/HitboxComponent.cpp
     src/components/PlayerComponent.cpp
     src/components/EnemyComponent.cpp
     src/components/MeleeAttackComponent.cpp
