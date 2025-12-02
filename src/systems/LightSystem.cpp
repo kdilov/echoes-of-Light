@@ -1,5 +1,6 @@
 #include "Systems.h"
 
+#include "components/EnemyComponent.h"
 #include "components/HitboxComponent.h"
 #include "components/LightComponent.h"
 #include "components/LightEmitterComponent.h"
@@ -448,6 +449,12 @@ std::optional<sf::FloatRect> LightSystem::computeMirrorBounds(Entity& entity) co
 std::optional<sf::FloatRect> LightSystem::computeBounds(Entity& entity) const {
     if (auto mirrorBounds = computeMirrorBounds(entity)) {
         return mirrorBounds;
+    }
+
+    if (auto* enemy = entity.getComponent<eol::EnemyComponent>()) {
+        if (!enemy->isAlive()) {
+            return std::nullopt;
+        }
     }
 
     if (auto* hitbox = entity.getComponent<eol::HitboxComponent>()) {
