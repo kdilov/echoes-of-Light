@@ -6,9 +6,9 @@
 #include <iostream>
 
 
-Menu::Menu(Game& game) : game(game) {
+Menu::Menu(Game& game) : game(game)  {
     
-    window = &game.getWindow();
+    
 
     if (!font.openFromFile("resources/fonts/ScienceGothic.ttf")) {
         std::cout << "Failed to load font!\n";
@@ -43,15 +43,17 @@ int Menu::run() {
         return 2;
     }
 
+    sf::RenderWindow& window = game.getWindow();
+
     // Set up scaled view for the menu
     sf::View menuView = GameSettings::getScaledView(window.getSize());
     window.setView(menuView);
 
     while (window.isOpen()) {
 
-        while (const auto event = window->pollEvent()) {
+        while (const auto event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) {
-                window->close();
+                window.close();
                 return 2;
             }
 
@@ -79,7 +81,7 @@ int Menu::run() {
         
     
         window.clear();
-        draw(window);
+        draw();
         window.display();
     }
 
@@ -89,10 +91,12 @@ int Menu::run() {
 int Menu::choice(int selectedIndex) {
     
     if (selectedIndex == 0) {
+        //Start the game
         Game game;
         return game.run();
     }
     else if (selectedIndex == 1) {
+        // Open option menu
         OptionsMenu options(game);
         return options.run();
     }
@@ -102,7 +106,9 @@ int Menu::choice(int selectedIndex) {
     }
 }
 
-void MainMenu::draw(sf::RenderWindow& window) {
+void Menu::draw() {
+
+    sf::RenderWindow& window = game.getWindow();
     // Draw title
     sf::Text title(font);
     title.setString("ECHOES OF LIGHT");

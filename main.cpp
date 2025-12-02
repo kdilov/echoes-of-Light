@@ -1,6 +1,5 @@
 #include <exception>
 #include <iostream>
-
 #include "SFML/Graphics.hpp"
 #include "Game.h"
 #include "Menu.h"
@@ -10,14 +9,18 @@
 
 int main() {
 
-    // Create window at Full HD resolution by default
-    sf::RenderWindow window(sf::VideoMode({ GameSettings::refWidth, GameSettings::refHeight }), "Echoes of Light");
+   
 
     Game game;
-    game.createWindow();
+
+    if (!game.initialize()) {
+        return -1;
+    }
+
     Menu menu(game);
     menu.run();
     return 0;
+
 
 
 }

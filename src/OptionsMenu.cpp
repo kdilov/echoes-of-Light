@@ -57,16 +57,19 @@ void OptionsMenu::updateVisuals()
 
 
 int OptionsMenu::run() {
+
+    sf::RenderWindow& window = game.getWindow();
+
     const auto buttonCount = static_cast<int>(buttons.size());
     if (buttonCount == 0) {
         return 2;
     }
 
-    while (window->isOpen()) {
+    while (window.isOpen()) {
 
-        while (const auto event = window->pollEvent()) {
+        while (const auto event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) {
-                window->close();
+                window.close();
                 return 0;
             }
 
@@ -109,8 +112,7 @@ int OptionsMenu::run() {
                 
                 case sf::Keyboard::Key::Enter:
                     if (selectedIndex == 0) {
-                        const sf::Vector2u& r = resolutions[resIndex];
-                        game.setResolution(r);
+                        game.setResolution(resIndex);
                         break;
                    }
                 
@@ -123,9 +125,9 @@ int OptionsMenu::run() {
             }
         }
 
-        window->clear();
+        window.clear();
         draw();
-        window->display();
+        window.display();
     }
 
     return 2; // Quit by default
@@ -133,7 +135,8 @@ int OptionsMenu::run() {
 
 
 void OptionsMenu::draw() {
+    sf::RenderWindow& window = game.getWindow();
     for (auto& b : buttons)
-        window->draw(b);
+        window.draw(b);
 }
 

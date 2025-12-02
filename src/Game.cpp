@@ -1,5 +1,4 @@
 #include "Game.h"
-
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -78,10 +77,6 @@ Game::Game()
     , enemyAISystem_{}
     , lightSystem_{combatSystem_} {}
 
-void Game::createWindow()  {
-    window_.create(sf::VideoMode({ windowWidth, windowHeight }), windowTitle);
-    window_.setFramerateLimit(framerateLimit);
-}
 
 int Game::run() {
     if (!initialized_ && !initialize()) {
@@ -569,17 +564,9 @@ std::string Game::findResourcePath(const std::string& relativePath) const {
     return relativePath;
 }
 
-void Game::setResolution(const sf::Vector2u& res) {
-   
-    currentResolution = res;
-    window_.setSize(res);
 
-    // Reapply frame rate
-    window_.setFramerateLimit(currentFramerate);
-}
-
-sf::Vector2u Game::getResolution() const {
-    return currentResolution;
+sf::RenderWindow& Game::getWindow() {
+    return window_;
 }
 
 void Game::setFramerateLimit(unsigned int limit) {
@@ -590,8 +577,3 @@ void Game::setFramerateLimit(unsigned int limit) {
 unsigned int Game::getFramerateLimit() const {
     return currentFramerate;
 }
-
-sf::RenderWindow& Game::getWindow() {
-    return window_;
-}
-
