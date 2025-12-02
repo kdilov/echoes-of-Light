@@ -10,8 +10,8 @@
 #include "components/EnemyComponent.h"
 #include "components/LightComponent.h"
 #include "components/LightEmitterComponent.h"
-#include "components/MeleeAttackComponent.h"
 #include "components/LightSourceComponent.h"
+#include "components/MeleeAttackComponent.h"
 #include "components/MirrorComponent.h"
 #include "components/PlayerComponent.h"
 #include "components/PuzzleComponent.h"
@@ -20,54 +20,69 @@
 #include "components/UpgradeComponent.h"
 #include "GameSettings.h"
 
+// =============================================================
+//   Helper Image Generators (unchanged from your original)
+// =============================================================
 namespace {
-    constexpr char windowTitle[] = "Echoes of Light";
 
-sf::Image createSolidImage(unsigned int size, sf::Color color) {
-    sf::Image img(sf::Vector2u(size, size), color);
-    return img;
-}
-
-sf::Image createCircularFalloffImage(unsigned int size,
-                                     sf::Color centerColor,
-                                     sf::Color edgeColor) {
-    sf::Image img(sf::Vector2u(size, size), sf::Color::Transparent);
-
-    const float half = static_cast<float>(size) * 0.5f;
-    for (unsigned int y = 0; y < size; ++y) {
-        for (unsigned int x = 0; x < size; ++x) {
-            const float dx = static_cast<float>(x) - half + 0.5f;
-            const float dy = static_cast<float>(y) - half + 0.5f;
-            const float dist = std::sqrt(dx * dx + dy * dy);
-            const float norm = dist / half;
-            if (norm <= 1.f) {
-                const float t = std::clamp(norm, 0.f, 1.f);
-                const auto mixChannel = [t](std::uint8_t a, std::uint8_t b) {
-                    return static_cast<std::uint8_t>(a * (1.f - t) + b * t);
-                };
-
-                sf::Color color;
-                color.r = mixChannel(centerColor.r, edgeColor.r);
-                color.g = mixChannel(centerColor.g, edgeColor.g);
-                color.b = mixChannel(centerColor.b, edgeColor.b);
-                color.a = mixChannel(centerColor.a, edgeColor.a);
-                img.setPixel(sf::Vector2u{x, y}, color);
-            }
-        }
+    sf::Image createSolidImage(unsigned int size, sf::Color color)
+    {
+        sf::Image img(sf::Vector2u(size, size), color);
+        return img;
     }
 
-    return img;
-}
-}
+    sf::Image createCircularFalloffImage(unsigned int size,
+        sf::Color centerColor,
+        sf::Color edgeColor)
+    {
+        sf::Image img(sf::Vector2u(size, size), sf::Color::Transparent);
 
+        const float half = static_cast<float>(size) * 0.5f;
+
+        for (unsigned int y = 0; y < size; ++y)
+        {
+            for (unsigned int x = 0; x < size; ++x)
+            {
+                float dx = static_cast<float>(x) - half + 0.5f;
+                float dy = static_cast<float>(y) - half + 0.5f;
+                float dist = std::sqrt(dx * dx + dy * dy);
+                float norm = dist / half;
+
+                if (norm <= 1.f)
+                {
+                    float t = std::clamp(norm, 0.f, 1.f);
+
+                    auto mix = [t](uint8_t a, uint8_t b)
+                        {
+                            return static_cast<uint8_t>(a * (1.f - t) + b * t);
+                        };
+
+                    sf::Color c;
+                    c.r = mix(centerColor.r, edgeColor.r);
+                    c.g = mix(centerColor.g, edgeColor.g);
+                    c.b = mix(centerColor.b, edgeColor.b);
+                    c.a = mix(centerColor.a, edgeColor.a);
+
+                    img.setPixel({ x, y }, c);
+                }
+            }
+        }
+
+        return img;
+    }
+
+} // namespace
+
+// =============================================================
+//   Constructor
+// =============================================================
 Game::Game()
-    : window_{}
-    , gameView_{}
-    , clock_{}
+    : initialized_(false)
+    , currentFramerate(60)
     , idleTexture_{}
     , moveTexture_{}
-    , initialized_{false}
-    , currentResolutionIndex_{ 0 }
+    , debugWhiteTexture_{}
+    , lightNodeTexture_{}
     , player_{}
     , lightBeacon_{}
     , enemy_{}
@@ -75,108 +90,70 @@ Game::Game()
     , worldObjects_{}
     , combatSystem_{}
     , enemyAISystem_{}
-    , lightSystem_{combatSystem_} {}
-
-
-int Game::run() {
-    if (!initialized_ && !initialize()) {
-        return -1;
-    }
-
-    while (window_.isOpen()) {
-        float deltaTime = clock_.restart().asSeconds();
-
-        handleEvents();
-        update(deltaTime);
-        render();
-    }
-
-    return 0;
+    , lightSystem_{ combatSystem_ }
+{
 }
 
-bool Game::initialize() {
-    // Create window at default resolution
-    window_.create(sf::VideoMode({ defaultWindowWidth, defaultWindowHeight }), windowTitle);
-    window_.setFramerateLimit(framerateLimit);
+// =============================================================
+//   Initialization
+// =============================================================
+bool Game::initialize()
+{
+    std::cout << "=== ECHOES OF LIGHT (Gameplay Initializing) ===\n";
 
-    // Set up the scaled view - this maps the reference resolution to the window
-    gameView_ = GameSettings::getScaledView(window_.getSize());
-    window_.setView(gameView_);
-
-    
-
-    std::cout << "=== ECHOES OF LIGHT ===" << std::endl;
-    std::cout << "Reference resolution: " << GameSettings::refWidth << "x" << GameSettings::refHeight << std::endl;
-
-    if (!loadResources()) {
+    if (!loadResources())
         return false;
-    }
 
     createEntities();
-    clock_.restart();
-
-    std::cout << "Controls: WASD to move, E to pickup/drop mirrors, ESC to exit" << std::endl;
-    std::cout << "Press F1/F2/F3 to change resolution" << std::endl;
 
     initialized_ = true;
     return true;
 }
 
-void Game::setResolution(unsigned int index) {
-    const auto& resolutions = GameSettings::getAvailableResolutions();
-    if (index >= resolutions.size()) {
-        return;
-    }
+// =============================================================
+//   Resource Loading
+// =============================================================
+bool Game::loadResources()
+{
+    std::string idlePath = findResourcePath("resources/sprites/Character_Idle.png");
+    std::string movePath = findResourcePath("resources/sprites/Character_Move.png");
 
-    const auto& res = resolutions[index];
-    currentResolutionIndex_ = index;
-
-    // Recreate window at new resolution
-    window_.create(sf::VideoMode({ res.width, res.height }), windowTitle);
-    window_.setFramerateLimit(framerateLimit);
-
-    // Update the view to scale properly
-    gameView_ = GameSettings::getScaledView(window_.getSize());
-    window_.setView(gameView_);
-
-    std::cout << "Resolution changed to: " << res.label << std::endl;
-}
-
-unsigned int Game::getCurrentResolutionIndex() const noexcept {
-    return currentResolutionIndex_;
-}
-
-bool Game::loadResources() {
-    const std::string idlePath = findResourcePath("resources/sprites/Character_Idle.png");
-    const std::string movePath = findResourcePath("resources/sprites/Character_Move.png");
-
-    if (!idleTexture_.loadFromFile(idlePath)) {
-        std::cerr << "ERROR: Failed to load idle texture" << std::endl;
+    if (!idleTexture_.loadFromFile(idlePath))
+    {
+        std::cerr << "ERROR: Failed to load idle sprite\n";
         return false;
     }
 
-    if (!moveTexture_.loadFromFile(movePath)) {
-        std::cerr << "ERROR: Failed to load move texture" << std::endl;
+    if (!moveTexture_.loadFromFile(movePath))
+    {
+        std::cerr << "ERROR: Failed to load movement sprite\n";
         return false;
     }
 
-    if (!debugWhiteTexture_.loadFromImage(createSolidImage(2, sf::Color::White))) {
-        std::cerr << "ERROR: Failed to create debug texture" << std::endl;
+    if (!debugWhiteTexture_.loadFromImage(createSolidImage(2, sf::Color::White)))
+    {
+        std::cerr << "ERROR: Failed to create debug texture\n";
         return false;
     }
 
-    const sf::Color centerColor(255, 255, 230, 255);
-    const sf::Color edgeColor(255, 255, 230, 80);
-    if (!lightNodeTexture_.loadFromImage(createCircularFalloffImage(64, centerColor, edgeColor))) {
-        std::cerr << "ERROR: Failed to create light node texture" << std::endl;
+    sf::Color center(255, 255, 230, 255);
+    sf::Color edge(255, 255, 230, 80);
+
+    if (!lightNodeTexture_.loadFromImage(createCircularFalloffImage(64, center, edge)))
+    {
+        std::cerr << "ERROR: Failed to create light node texture\n";
         return false;
     }
 
-    std::cout << "Textures loaded successfully" << std::endl;
+    std::cout << "Textures loaded OK.\n";
     return true;
 }
 
-void Game::createEntities() {
+// =============================================================
+//   Create ALL Gameplay Entities (Original Logic Restored)
+// =============================================================
+void Game::createEntities()
+{
     player_ = createPlayerEntity();
     lightBeacon_ = createLightBeaconEntity();
     enemy_ = createEnemyEntity();
@@ -187,393 +164,352 @@ void Game::createEntities() {
     entities_.push_back(&enemy_);
 
     worldObjects_.clear();
-    worldObjects_.reserve(12);
+    worldObjects_.reserve(16);
 
-    auto addWorldEntity = [this](Entity&& entity) {
-        auto handle = std::make_unique<Entity>();
-        *handle = std::move(entity);
-        entities_.push_back(handle.get());
-        worldObjects_.push_back(std::move(handle));
+    auto addWorld = [&](Entity&& e)
+        {
+            auto ptr = std::make_unique<Entity>();
+            *ptr = std::move(e);
+            entities_.push_back(ptr.get());
+            worldObjects_.push_back(std::move(ptr));
         };
 
-    // ========== MIRRORS ==========
-    // Positions expressed as percentages of screen (0.0 - 1.0)
-
-    // Prism mirror - right side of screen, slightly above center
-    addWorldEntity(createMirrorEntity(
+    // === Mirrors ===
+    addWorld(createMirrorEntity(
         GameSettings::relativePos(0.65f, 0.47f),
-        sf::Vector2f{ -1.f, 1.f },
+        { -1, 1 },
         GameSettings::relativeSize(0.07f, 0.033f),
         eol::MirrorComponent::MirrorType::Prism));
 
-    // Splitter mirror - center-left, upper area
-    addWorldEntity(createMirrorEntity(
+    addWorld(createMirrorEntity(
         GameSettings::relativePos(0.45f, 0.30f),
-        sf::Vector2f{ 1.f, 1.f },
+        { 1, 1 },
         GameSettings::relativeSize(0.052f, 0.03f),
         eol::MirrorComponent::MirrorType::Splitter));
 
-    // Flat mirror - center of screen
-    addWorldEntity(createMirrorEntity(
+    addWorld(createMirrorEntity(
         GameSettings::relativePos(0.50f, 0.50f),
-        sf::Vector2f{ 1.f, 1.f },
+        { 1, 1 },
         GameSettings::relativeSize(0.052f, 0.03f),
         eol::MirrorComponent::MirrorType::Flat));
 
-    // ========== LIGHT SOURCES ==========
-    addWorldEntity(createLightSourceNode(
-        "PrismNode",
-        GameSettings::relativePos(0.325f, 0.60f),
-        true));
+    // === Light Nodes ===
+    addWorld(createLightSourceNode("PrismNode",
+        GameSettings::relativePos(0.325f, 0.60f), true));
 
-    addWorldEntity(createLightSourceNode(
-        "AccessLight",
-        GameSettings::relativePos(0.875f, 0.70f),
-        false));
+    addWorld(createLightSourceNode("AccessLight",
+        GameSettings::relativePos(0.875f, 0.70f), false));
 
-    // ========== WALLS ==========
-    addWorldEntity(createWallEntity(
+    // === Walls ===
+    addWorld(createWallEntity(
         GameSettings::relativePos(0.50f, 0.167f),
         GameSettings::relativeSize(0.25f, 0.037f)));
 
-    addWorldEntity(createWallEntity(
+    addWorld(createWallEntity(
         GameSettings::relativePos(0.125f, 0.50f),
         GameSettings::relativeSize(0.021f, 0.25f)));
 
-    addWorldEntity(createWallEntity(
+    addWorld(createWallEntity(
         GameSettings::relativePos(0.75f, 0.75f),
         GameSettings::relativeSize(0.0625f, 0.111f)));
 
-    addWorldEntity(createWallEntity(
+    addWorld(createWallEntity(
         GameSettings::relativePos(0.25f, 0.867f),
         GameSettings::relativeSize(0.125f, 0.037f)));
 
-    addWorldEntity(createWallEntity(
+    addWorld(createWallEntity(
         GameSettings::relativePos(0.3625f, 0.783f),
         GameSettings::relativeSize(0.021f, 0.133f)));
 
-    addWorldEntity(createWallEntity(
+    addWorld(createWallEntity(
         GameSettings::relativePos(0.833f, 0.37f),
         GameSettings::relativeSize(0.021f, 0.278f)));
 
-    addWorldEntity(createWallEntity(
+    addWorld(createWallEntity(
         GameSettings::relativePos(0.417f, 0.694f),
         GameSettings::relativeSize(0.156f, 0.037f)));
-
 }
 
-Entity Game::createPlayerEntity() {
-    Entity entity;
-    entity.name = "Player";
+// =============================================================
+//   Entity Creation Functions (ALL ORIGINAL LOGIC RESTORED)
+// =============================================================
+Entity Game::createPlayerEntity()
+{
+    Entity e;
+    e.name = "Player";
 
-    // Player starts at center of screen
-    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
+    e.components.emplace_back(std::make_unique<eol::TransformComponent>(
         GameSettings::center(),
         sf::Vector2f{ 0.75f, 0.75f },
         0.f));
 
-    entity.components.emplace_back(std::make_unique<eol::RenderComponent>());
-    entity.components.emplace_back(std::make_unique<eol::PlayerComponent>());
+    e.components.emplace_back(std::make_unique<eol::RenderComponent>());
+    e.components.emplace_back(std::make_unique<eol::PlayerComponent>());
 
-    // Collision box - relative to screen size
     auto collision = std::make_unique<eol::CollisionComponent>();
     collision->setBoundingBox(GameSettings::relativeSize(0.022f, 0.039f));
     collision->setSolid(true);
-    entity.components.emplace_back(std::move(collision));
+    e.components.emplace_back(std::move(collision));
 
-    auto animationComponent = std::make_unique<eol::AnimationComponent>();
+    auto anim = std::make_unique<eol::AnimationComponent>();
 
-    eol::Animation idleAnim;
-    idleAnim.name = "idle";
-    idleAnim.texture = &idleTexture_;
-    idleAnim.frameCount = 4;
-    idleAnim.frameWidth = 128;
-    idleAnim.frameHeight = 128;
-    idleAnim.frameDuration = 0.15f;
-    idleAnim.loop = true;
-    animationComponent->addAnimation("idle", idleAnim);
+    eol::Animation idle;
+    idle.name = "idle";
+    idle.texture = &idleTexture_;
+    idle.frameCount = 4;
+    idle.frameWidth = 128;
+    idle.frameHeight = 128;
+    idle.frameDuration = 0.15f;
+    idle.loop = true;
+    anim->addAnimation("idle", idle);
 
-    eol::Animation walkAnim;
-    walkAnim.name = "walk";
-    walkAnim.texture = &moveTexture_;
-    walkAnim.frameCount = 6;
-    walkAnim.frameWidth = 128;
-    walkAnim.frameHeight = 128;
-    walkAnim.frameDuration = 0.1f;
-    walkAnim.loop = true;
-    animationComponent->addAnimation("walk", walkAnim);
+    eol::Animation walk;
+    walk.name = "walk";
+    walk.texture = &moveTexture_;
+    walk.frameCount = 6;
+    walk.frameWidth = 128;
+    walk.frameHeight = 128;
+    walk.frameDuration = 0.1f;
+    walk.loop = true;
+    anim->addAnimation("walk", walk);
 
-    animationComponent->setAnimation("idle");
-    entity.components.emplace_back(std::move(animationComponent));
+    anim->setAnimation("idle");
+    e.components.emplace_back(std::move(anim));
 
-    entity.components.emplace_back(std::make_unique<eol::LightComponent>());
+    e.components.emplace_back(std::make_unique<eol::LightComponent>());
 
     auto emitter = std::make_unique<eol::LightEmitterComponent>();
     emitter->setBeamLength(GameSettings::relativeX(0.625f));
     emitter->setBeamWidth(GameSettings::relativeMin(0.015f));
     emitter->setDamage(50.f);
     emitter->setMaxReflections(4);
-    entity.components.emplace_back(std::move(emitter));
+    e.components.emplace_back(std::move(emitter));
 
-    entity.components.emplace_back(std::make_unique<eol::UpgradeComponent>());
+    e.components.emplace_back(std::make_unique<eol::UpgradeComponent>());
 
-    return entity;
+    return e;
 }
 
-Entity Game::createLightBeaconEntity() {
-    Entity entity;
-    entity.name = "LightBeacon";
+Entity Game::createLightBeaconEntity()
+{
+    Entity e;
+    e.name = "LightBeacon";
 
-    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
+    e.components.emplace_back(std::make_unique<eol::TransformComponent>(
         GameSettings::relativePos(0.80f, 0.233f),
         sf::Vector2f{ 0.65f, 0.65f },
         0.f));
 
-    auto lightSource = std::make_unique<eol::LightSourceComponent>();
-    lightSource->setActive(false);
-    lightSource->setMovable(false);
-    lightSource->setFuel(0.f);
-    entity.components.emplace_back(std::move(lightSource));
+    auto src = std::make_unique<eol::LightSourceComponent>();
+    src->setMovable(false);
+    src->setActive(false);
+    src->setFuel(0.f);
+    e.components.emplace_back(std::move(src));
 
     auto puzzle = std::make_unique<eol::PuzzleComponent>();
     puzzle->setRequiredLight(5);
-    entity.components.emplace_back(std::move(puzzle));
+    e.components.emplace_back(std::move(puzzle));
 
-    auto beaconLight = std::make_unique<eol::LightComponent>();
-    beaconLight->setRadius(GameSettings::relativeMin(0.324f));
-    beaconLight->setBaseIntensity(0.2f);
-    entity.components.emplace_back(std::move(beaconLight));
+    auto light = std::make_unique<eol::LightComponent>();
+    light->setRadius(GameSettings::relativeMin(0.324f));
+    light->setBaseIntensity(0.2f);
+    e.components.emplace_back(std::move(light));
 
-    entity.components.emplace_back(std::make_unique<eol::RenderComponent>());
-    return entity;
+    e.components.emplace_back(std::make_unique<eol::RenderComponent>());
+    return e;
 }
 
-Entity Game::createEnemyEntity() {
-    Entity entity;
-    entity.name = "Enemy";
+Entity Game::createEnemyEntity()
+{
+    Entity e;
+    e.name = "Enemy";
 
-    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
+    e.components.emplace_back(std::make_unique<eol::TransformComponent>(
         GameSettings::relativePos(0.65f, 0.533f),
         sf::Vector2f{ 1.5f, 1.5f },
         0.f));
 
-    entity.components.emplace_back(std::make_unique<eol::EnemyComponent>());
+    e.components.emplace_back(std::make_unique<eol::EnemyComponent>());
 
     auto render = std::make_unique<eol::RenderComponent>();
-    sf::Sprite& sprite = render->getSprite();
+    auto& sprite = render->getSprite();
     sprite.setTexture(debugWhiteTexture_);
-    sprite.setTextureRect(sf::IntRect(sf::Vector2i{ 0, 0 }, sf::Vector2i{ 1, 1 }));
-    sprite.setOrigin(sf::Vector2f{ 0.5f, 0.5f });
-    sf::Vector2f enemySize = GameSettings::relativeSize(0.022f, 0.05f);
-    sprite.setScale(enemySize);
+    sprite.setTextureRect({ {0,0}, {1,1} });
+    sprite.setOrigin({ 0.5f, 0.5f });
+    sprite.setScale(GameSettings::relativeSize(0.022f, 0.05f));
     render->setTint(sf::Color(255, 110, 110, 240));
-    entity.components.emplace_back(std::move(render));
+    e.components.emplace_back(std::move(render));
 
-    auto enemyLight = std::make_unique<eol::LightComponent>();
-    enemyLight->setBaseIntensity(0.15f);
-    enemyLight->setRadius(GameSettings::relativeMin(0.167f));
-    entity.components.emplace_back(std::move(enemyLight));
+    auto light = std::make_unique<eol::LightComponent>();
+    light->setBaseIntensity(0.15f);
+    light->setRadius(GameSettings::relativeMin(0.167f));
+    e.components.emplace_back(std::move(light));
 
     auto melee = std::make_unique<eol::MeleeAttackComponent>();
     melee->setDamage(22.f);
     melee->setRange(GameSettings::relativeMin(0.083f));
     melee->setCooldown(1.2f);
-    entity.components.emplace_back(std::move(melee));
+    e.components.emplace_back(std::move(melee));
 
     auto ai = std::make_unique<eol::EnemyAIComponent>();
-    const sf::Vector2f basePos = GameSettings::relativePos(0.65f, 0.533f);
-    ai->setPatrolPoints({
-        basePos,
-        basePos + sf::Vector2f{-GameSettings::relativeX(0.175f), 0.f}
-        });
+    const auto basePos = GameSettings::relativePos(0.65f, 0.533f);
+    ai->setPatrolPoints({ basePos, basePos + sf::Vector2f{-GameSettings::relativeX(0.175f), 0.f} });
     ai->setDetectionRange(GameSettings::relativeMin(0.37f));
     ai->setAttackRange(GameSettings::relativeMin(0.014f));
     ai->setMoveSpeed(GameSettings::relativeMin(0.046f));
-    entity.components.emplace_back(std::move(ai));
+    e.components.emplace_back(std::move(ai));
 
-    return entity;
+    return e;
 }
 
 Entity Game::createMirrorEntity(const sf::Vector2f& position,
-                                const sf::Vector2f& normal,
-                                const sf::Vector2f& size,
-                                eol::MirrorComponent::MirrorType type) {
-    const auto normalizeVec = [](const sf::Vector2f& vec) {
-        const float length = std::sqrt(vec.x * vec.x + vec.y * vec.y);
-        if (length <= 0.0001f) {
-            return sf::Vector2f{0.f, -1.f};
-        }
-        return sf::Vector2f{vec.x / length, vec.y / length};
-    };
+    const sf::Vector2f& normal,
+    const sf::Vector2f& size,
+    eol::MirrorComponent::MirrorType type)
+{
+    const auto normalize = [](sf::Vector2f v)
+        {
+            float len = std::sqrt(v.x * v.x + v.y * v.y);
+            return (len > 0.0001f) ? sf::Vector2f(v.x / len, v.y / len)
+                : sf::Vector2f(0.f, -1.f);
+        };
 
-    const sf::Vector2f normalizedNormal = normalizeVec(normal);
-    const sf::Vector2f tangent{-normalizedNormal.y, normalizedNormal.x};
-    constexpr float radToDeg = 180.f / 3.1415926535f;
-    const float rotation = std::atan2(tangent.y, tangent.x) * radToDeg;
-    const sf::Vector2f center = position + sf::Vector2f{size.x * 0.5f, size.y * 0.5f};
+    sf::Vector2f n = normalize(normal);
+    sf::Vector2f tangent(-n.y, n.x);
+    float rotation = std::atan2(tangent.y, tangent.x) * 180.f / 3.1415926f;
 
-    Entity entity;
-    entity.name = "Mirror";
-    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
-        center,
-        sf::Vector2f{size.x, size.y},
-        rotation));
+    sf::Vector2f center = position + sf::Vector2f(size.x * 0.5f, size.y * 0.5f);
 
-    auto mirror = std::make_unique<eol::MirrorComponent>();
-    mirror->setNormal(normalizedNormal);
-    mirror->setSize(size);
-    mirror->setType(type);
-    entity.components.emplace_back(std::move(mirror));
+    Entity e;
+    e.name = "Mirror";
+
+    e.components.emplace_back(std::make_unique<eol::TransformComponent>(
+        center, sf::Vector2f(size.x, size.y), rotation));
+
+    auto comp = std::make_unique<eol::MirrorComponent>();
+    comp->setNormal(n);
+    comp->setSize(size);
+    comp->setType(type);
+    e.components.emplace_back(std::move(comp));
 
     auto render = std::make_unique<eol::RenderComponent>();
-    sf::Sprite& sprite = render->getSprite();
+    auto& sprite = render->getSprite();
     sprite.setTexture(debugWhiteTexture_);
-    sprite.setTextureRect(sf::IntRect(sf::Vector2i{0, 0}, sf::Vector2i{1, 1}));
-    sprite.setOrigin(sf::Vector2f{0.5f, 0.5f});
+    sprite.setTextureRect({ {0,0}, {1,1} });
+    sprite.setOrigin({ 0.5f, 0.5f });
     render->setTint(sf::Color(160, 210, 255, 220));
-    entity.components.emplace_back(std::move(render));
+    e.components.emplace_back(std::move(render));
 
-    return entity;
+    return e;
 }
 
-Entity Game::createLightSourceNode(const std::string& name,
-                                   const sf::Vector2f& position,
-                                   bool movable) {
-    Entity entity;
-    entity.name = name;
-    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
-        position,
-        sf::Vector2f{1.0f, 1.0f},
-        0.f));
+Entity Game::createLightSourceNode(
+    const std::string& name,
+    const sf::Vector2f& position,
+    bool movable)
+{
+    Entity e;
+    e.name = name;
 
-    auto source = std::make_unique<eol::LightSourceComponent>();
-    source->setMovable(movable);
-    source->setActive(true);
-    source->setFuel(100.f);
-    entity.components.emplace_back(std::move(source));
+    e.components.emplace_back(std::make_unique<eol::TransformComponent>(
+        position, sf::Vector2f{ 1.f, 1.f }, 0.f));
+
+    auto src = std::make_unique<eol::LightSourceComponent>();
+    src->setMovable(movable);
+    src->setActive(true);
+    src->setFuel(100.f);
+    e.components.emplace_back(std::move(src));
 
     auto light = std::make_unique<eol::LightComponent>();
     light->setRadius(GameSettings::relativeMin(0.259f));
     light->setBaseIntensity(0.6f);
-    entity.components.emplace_back(std::move(light));
+    e.components.emplace_back(std::move(light));
 
     auto render = std::make_unique<eol::RenderComponent>();
-    sf::Sprite& sprite = render->getSprite();
+    auto& sprite = render->getSprite();
     sprite.setTexture(lightNodeTexture_);
-    const auto texSize = lightNodeTexture_.getSize();
-    sprite.setTextureRect(sf::IntRect(sf::Vector2i{0, 0}, sf::Vector2i(texSize)));
-    sprite.setOrigin(sf::Vector2f{static_cast<float>(texSize.x) * 0.5f,
-                                  static_cast<float>(texSize.y) * 0.5f});
-    render->setTint(movable ? sf::Color(255, 255, 200) : sf::Color(190, 220, 255));
-    entity.components.emplace_back(std::move(render));
-    return entity;
+    sf::Vector2u tex = lightNodeTexture_.getSize();
+    sprite.setTextureRect({ {0,0}, sf::Vector2i(tex) });
+    sprite.setOrigin({ tex.x * 0.5f, tex.y * 0.5f });
+    render->setTint(movable ? sf::Color(255, 255, 200)
+        : sf::Color(190, 220, 255));
+    e.components.emplace_back(std::move(render));
+
+    return e;
 }
 
-Entity Game::createWallEntity(const sf::Vector2f& position, const sf::Vector2f& size) {
-    Entity entity;
-    entity.name = "Wall";
+Entity Game::createWallEntity(const sf::Vector2f& pos, const sf::Vector2f& size)
+{
+    Entity e;
+    e.name = "Wall";
 
-    entity.components.emplace_back(std::make_unique<eol::TransformComponent>(
-        position,
-        sf::Vector2f{ size.x / 2.f, size.y / 2.f },
+    e.components.emplace_back(std::make_unique<eol::TransformComponent>(
+        pos,
+        sf::Vector2f(size.x * 0.5f, size.y * 0.5f),
         0.f));
 
-    // Collision - this is what stops the player
-    auto collision = std::make_unique<eol::CollisionComponent>();
-    collision->setBoundingBox(size);
-    collision->setSolid(true);
-    entity.components.emplace_back(std::move(collision));
+    auto coll = std::make_unique<eol::CollisionComponent>();
+    coll->setBoundingBox(size);
+    coll->setSolid(true);
+    e.components.emplace_back(std::move(coll));
 
-    // Render - so we can see the wall
     auto render = std::make_unique<eol::RenderComponent>();
-    sf::Sprite& sprite = render->getSprite();
+    auto& sprite = render->getSprite();
     sprite.setTexture(debugWhiteTexture_);
-    sprite.setTextureRect(sf::IntRect(sf::Vector2i{ 0, 0 }, sf::Vector2i{ 2, 2 }));
-    sprite.setOrigin(sf::Vector2f{ 1.f, 1.f });
-    render->setTint(sf::Color(160, 160, 180, 220));  
-    entity.components.emplace_back(std::move(render));
+    sprite.setTextureRect({ {0,0}, {2,2} });
+    sprite.setOrigin({ 1.f, 1.f });
+    render->setTint(sf::Color(160, 160, 180, 220));
+    e.components.emplace_back(std::move(render));
 
-    
-
-    return entity;
+    return e;
 }
 
-void Game::handleEvents() {
-    while (const auto event = window_.pollEvent()) {
-        if (event->is<sf::Event::Closed>()) {
-            window_.close();
-        }
-
-        if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-            switch (keyPressed->code) {
-            case sf::Keyboard::Key::Escape:
-                window_.close();
-                break;
-                // Resolution hotkeys
-            case sf::Keyboard::Key::F1:
-                setResolution(0);  // 1920x1080
-                break;
-            case sf::Keyboard::Key::F2:
-                setResolution(1);  // 1280x720
-                break;
-            case sf::Keyboard::Key::F3:
-                setResolution(2);  // 800x600
-                break;
-            default:
-                break;
-            }
-        }
-    }
+// =============================================================
+//   UPDATE (Scene system calls this)
+// =============================================================
+void Game::update(float dt, sf::RenderWindow& window)
+{
+    inputSystem_.updateWithCollision(player_, dt, window, entities_);
+    animationSystem_.update(entities_, dt);
+    enemyAISystem_.update(entities_, dt, player_);
+    combatSystem_.updateMeleeAttacks(entities_, dt);
+    lightSystem_.update(entities_, dt, window);
 }
 
-void Game::update(float deltaTime) {
-    inputSystem_.updateWithCollision(player_, deltaTime, window_, entities_);
-    animationSystem_.update(entities_, deltaTime);
-    enemyAISystem_.update(entities_, deltaTime, player_);
-    combatSystem_.updateMeleeAttacks(entities_, deltaTime);
-    lightSystem_.update(entities_, deltaTime, window_);
-
-    // Level progression and win-condition logic will be reinstated when
-    // LevelManager support is ready.
+// =============================================================
+//   RENDER (Scene system calls this)
+// =============================================================
+void Game::render(sf::RenderWindow& window)
+{
+    renderSystem_.render(window, entities_);
+    lightSystem_.render(window, entities_);
 }
 
-void Game::render() {
-    window_.clear(sf::Color(20, 20, 30));
-    // Make sure the scaled view is active
-    window_.setView(gameView_);
-    renderSystem_.render(window_, entities_);
-    lightSystem_.render(window_, entities_);
-
-    window_.display();
+// =============================================================
+//   Utilities
+// =============================================================
+void Game::setFramerateLimit(unsigned int limit)
+{
+    currentFramerate = limit;
 }
 
-std::string Game::findResourcePath(const std::string& relativePath) const {
-    const std::vector<std::string> possiblePaths = {
-        relativePath,
-        "../../../" + relativePath,
-        "../../../../" + relativePath,
-        "D:/code/echoes/echoes-of-Light/" + relativePath
+unsigned int Game::getFramerateLimit() const
+{
+    return currentFramerate;
+}
+
+std::string Game::findResourcePath(const std::string& relative) const
+{
+    const std::vector<std::string> paths = {
+        relative,
+        "../../../" + relative,
+        "../../../../" + relative,
+        "D:/code/echoes/echoes-of-Light/" + relative
     };
 
-    for (const auto& path : possiblePaths) {
-        if (std::filesystem::exists(path)) {
-            return path;
-        }
-    }
+    for (auto& p : paths)
+        if (std::filesystem::exists(p))
+            return p;
 
-    return relativePath;
-}
-
-
-sf::RenderWindow& Game::getWindow() {
-    return window_;
-}
-
-void Game::setFramerateLimit(unsigned int limit) {
-    currentFramerate = limit;
-    window_.setFramerateLimit(limit);
-}
-
-unsigned int Game::getFramerateLimit() const {
-    return currentFramerate;
+    return relative;
 }

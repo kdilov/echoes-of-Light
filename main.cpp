@@ -1,32 +1,24 @@
-#include <exception>
 #include <iostream>
-#include "SFML/Graphics.hpp"
-#include "Game.h"
-#include "Menu.h"
-#include "OptionsMenu.h"
-#include "GameSettings.h"
+#include "Application.h"
+#include "scenes/MainMenuScene.h"
 
+int main()
+{
+    try
+    {
+        Application app;
 
-int main() {
+        // Start at the main menu
+        app.pushScene(std::make_shared<MainMenuScene>(app));
 
-   
-    Game game;
-
-    if (!game.initialize())
+        // Run the application loop
+        app.run();
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << "Fatal error: " << ex.what() << "\n";
         return -1;
-
-    int menuResult = 2;
-
-    while (menuResult != 0) {   
-        Menu menu(game);
-        menuResult = menu.run();
-
-        if (menuResult == 1) {  
-            game.run();
-            menuResult = 2;     
-        }
     }
 
     return 0;
-
 }

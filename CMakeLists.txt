@@ -21,8 +21,12 @@ link_directories("${CMAKE_BINARY_DIR}/lib/SFML/lib")
 set(EOL_SOURCES
     main.cpp
     src/Game.cpp
-    src/Menu.cpp
-    src/OptionsMenu.cpp
+    src/scenes/SceneStack.cpp
+    src/Application.cpp
+    src/scenes/GameplayScene.cpp
+    src/scenes/MainMenuScene.cpp
+    src/scenes/OptionsMenuScene.cpp
+    src/scenes/PauseMenuScene.cpp
     src/components/Component.cpp
     src/components/TransformComponent.cpp
     src/components/RenderComponent.cpp
@@ -49,7 +53,7 @@ set(EOL_SOURCES
     
 )
 
-add_executable(echoes-of-light ${EOL_SOURCES} )
+add_executable(echoes-of-light ${EOL_SOURCES}   "src/scenes/SceneStack.cpp" "src/Application.cpp" "src/scenes/MainMenuScene.cpp" "src/scenes/PauseMenuScene.cpp" "src/scenes/GameplayScene.cpp")
 target_include_directories(echoes-of-light PRIVATE ${SFML_INCS} include)
 target_link_libraries(echoes-of-light sfml-graphics)
 
