@@ -10,17 +10,23 @@
 int main() {
 
    
-
     Game game;
 
-    if (!game.initialize()) {
+    if (!game.initialize())
         return -1;
+
+    int menuResult = 2;
+
+    while (menuResult != 0) {   
+        Menu menu(game);
+        menuResult = menu.run();
+
+        if (menuResult == 1) {  
+            game.run();
+            menuResult = 2;     
+        }
     }
 
-    Menu menu(game);
-    menu.run();
     return 0;
-
-
 
 }

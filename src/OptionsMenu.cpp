@@ -117,7 +117,7 @@ int OptionsMenu::run() {
                    }
                 
                 case sf::Keyboard::Key::Escape:
-                    return 1;
+                    return 2;
 
                 default:
                     break;
@@ -130,7 +130,7 @@ int OptionsMenu::run() {
         window.display();
     }
 
-    return 2; // Quit by default
+    return 1; // Quit by default
 }
 
 

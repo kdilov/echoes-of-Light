@@ -68,10 +68,20 @@ int Menu::run() {
                     updateVisuals();
                     break;
 
-                case sf::Keyboard::Key::Enter:
-                    return choice(selectedIndex);
+                case sf::Keyboard::Key::Enter: {
+                    int result = choice(selectedIndex);
+
+                    if (result == 2)
+                        continue;
+                    return result;
+
+                }
+                    
+                    
                 case sf::Keyboard::Key::Escape:
-                    return 2;
+                    return 0;
+
+
                 default:
                     break;
                 }
@@ -85,20 +95,22 @@ int Menu::run() {
         window.display();
     }
 
-    return 2; // Quit by default
+    return 0; // Quit by default
 }
 
 int Menu::choice(int selectedIndex) {
     
     if (selectedIndex == 0) {
         //Start the game
-        Game game;
-        return game.run();
+        return 1;
     }
     else if (selectedIndex == 1) {
         // Open option menu
         OptionsMenu options(game);
-        return options.run();
+        int result = options.run();
+        
+        return result;
+
     }
     else {
         return 0;
