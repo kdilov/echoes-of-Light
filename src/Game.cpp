@@ -104,6 +104,21 @@ bool Game::initialize()
     if (!loadResources())
         return false;
 
+    // Initialize dialog system
+    if (!dialogSystem_.initialize(gameFont_)) {
+        std::cerr << "ERROR: Failed to initialize dialog system\n";
+        return false;
+    }
+
+    // Show intro dialog when game starts
+    dialogSystem_.startDialog({
+        {"Narrator", "The kingdom has fallen into darkness..."},
+        {"Narrator", "Only one hero remains who can restore the light."},
+        {"King", "You must travel through the echoes of time to save us."},
+        {"Hero", "I will not fail you, my lord."}
+        });
+
+
     createEntities();
 
     initialized_ = true;
@@ -145,7 +160,15 @@ bool Game::loadResources()
         return false;
     }
 
+    // Load font for dialog system
+    std::string fontPath = findResourcePath("resources/fonts/ScienceGothic.ttf");
+    if (!gameFont_.openFromFile(fontPath)) {
+        std::cerr << "ERROR: Failed to load game font\n";
+        return false;
+    }
+
     std::cout << "Textures loaded OK.\n";
+    std::cout << "Font loaded OK.\n";
     return true;
 }
 
@@ -469,10 +492,18 @@ Entity Game::createWallEntity(const sf::Vector2f& pos, const sf::Vector2f& size)
 // =============================================================
 void Game::update(float dt, sf::RenderWindow& window)
 {
-    inputSystem_.updateWithCollision(player_, dt, window, entities_);
-    animationSystem_.update(entities_, dt);
-    enemyAISystem_.update(entities_, dt, player_);
-    combatSystem_.updateMeleeAttacks(entities_, dt);
+    // Update dialog system first
+    dialogSystem_.update(dt);
+
+    // Only update gameplay if dialog is not active (pauses game during dialog)
+    if (!dialogSystem_.isActive()) {
+        inputSystem_.updateWithCollision(player_, dt, window, entities_);
+        animationSystem_.update(entities_, dt);
+        enemyAISystem_.update(entities_, dt, player_);
+        combatSystem_.updateMeleeAttacks(entities_, dt);
+    }
+
+    // Light system updates regardless (for visual effects)
     lightSystem_.update(entities_, dt, window);
 }
 
@@ -483,6 +514,9 @@ void Game::render(sf::RenderWindow& window)
 {
     renderSystem_.render(window, entities_);
     lightSystem_.render(window, entities_);
+
+    // Render dialog on top of everything
+    dialogSystem_.render(window);
 }
 
 // =============================================================
