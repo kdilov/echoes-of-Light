@@ -8,8 +8,6 @@
 #include "GameSettings.h"
 
 
-   
-
 class Game
 {
 public:
@@ -21,6 +19,7 @@ public:
     
     void render(sf::RenderWindow& window);
     
+    // Frame rate control
     void setFramerateLimit(unsigned int limit);
     unsigned int getFramerateLimit() const;
 
