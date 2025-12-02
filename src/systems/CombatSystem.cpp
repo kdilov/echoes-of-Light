@@ -1,5 +1,6 @@
 #include "Systems.h"
 
+#include "components/CollisionComponent.h"
 #include "components/EnemyComponent.h"
 #include "components/LightComponent.h"
 #include "components/MeleeAttackComponent.h"
@@ -98,6 +99,17 @@ bool CombatSystem::applyEnemyHit(Entity& target, float intensity) {
         }
         if (auto* light = target.getComponent<eol::LightComponent>()) {
             light->setIntensity(light->getBaseIntensity());
+        }
+        target.name = "Enemy_Dead";
+        if (auto* ai = target.getComponent<eol::EnemyAIComponent>()) {
+            ai->setState(eol::EnemyAIComponent::BehaviorState::Patrol);
+            ai->setEnabled(false);
+        }
+        if (auto* melee = target.getComponent<eol::MeleeAttackComponent>()) {
+            melee->setEnabled(false);
+        }
+        if (auto* collision = target.getComponent<eol::CollisionComponent>()) {
+            collision->setSolid(false);
         }
         return true;
     }
