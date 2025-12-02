@@ -7,12 +7,14 @@
 #include "components/MirrorComponent.h"
 #include "GameSettings.h"
 #include "systems/DialogSystem.h"
-
+#include "components/LevelManager.h"
 
 class Game
 {
 public:
     Game();
+    explicit Game(int startLevel);
+    int run();
 
     bool initialize();
     
@@ -28,6 +30,9 @@ private:
     
     bool loadResources();
     std::string findResourcePath(const std::string& relativePath) const;
+
+    LevelManager levels_;
+    int startLevelIndex_ = 0;
 
     
     void createEntities();
@@ -70,6 +75,8 @@ private:
     CombatSystem combatSystem_;
     EnemyAISystem enemyAISystem_;
     LightSystem lightSystem_;
+
+
 
     
     unsigned int currentFramerate;

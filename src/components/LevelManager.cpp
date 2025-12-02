@@ -1,92 +1,76 @@
 #include "components/LevelManager.h"
 #include <iostream>
 
-
-// Constructor
 LevelManager::LevelManager()
-    : currentLevelIndex(0),
-      map("resources/levels/past.txt")   // default temp, replaced on load
+    : currentLevelIndex(0)
 {
-    // Predefined level files
+    // 12-level default list (you can replace these names)
     levelFiles = {
-        "resources/levels/past.txt",
-        "resources/levels/present.txt",
-        "resources/levels/future.txt"
+        "resources/levels/past_1.txt",
+        "resources/levels/past_2.txt",
+        "resources/levels/past_3.txt",
+        "resources/levels/past_final.txt",
+        "resources/levels/present_1.txt",
+        "resources/levels/present_2.txt",
+        "resources/levels/present_3.txt",
+        "resources/levels/present_final.txt",
+        "resources/levels/future_1.txt",
+        "resources/levels/future_2.txt",
+        "resources/levels/future_3.txt",
+        "resources/levels/future_final.txt"
     };
+
+    // load first by default
+    if (!levelFiles.empty()) map.loadFromFile(levelFiles[currentLevelIndex]);
 }
 
-// Load a specific level by filename
 bool LevelManager::loadLevel(const std::string& levelName) {
-    std::cout << "Loading level: " << levelName << std::endl;
-    return map.loadFromFile(levelName);
+    std::cout << "LevelManager: Loading " << levelName << std::endl;
+    bool ok = map.loadFromFile(levelName);
+    if (ok) {
+        // update current index to match if the file is in the list
+        for (size_t i = 0; i < levelFiles.size(); ++i) {
+            if (levelFiles[i] == levelName) { currentLevelIndex = static_cast<int>(i); break; }
+        }
+    }
+    return ok;
 }
 
-// Load the current level in the list
 bool LevelManager::loadCurrentLevel() {
-    if (currentLevelIndex >= levelFiles.size()) {
-        std::cout << "No more levels to load." << std::endl;
+    if (currentLevelIndex < 0 || currentLevelIndex >= static_cast<int>(levelFiles.size())) {
+        std::cout << "LevelManager: current index out of range\n";
         return false;
     }
-
-    const std::string& filename = levelFiles[currentLevelIndex];
-
-    std::cout << "Loading level " << (currentLevelIndex + 1)
-              << " / " << levelFiles.size()
-              << " : " << filename << std::endl;
-
-    return map.loadFromFile(filename);
+    return loadLevel(levelFiles[currentLevelIndex]);
 }
 
-// Advance to the next level
 void LevelManager::nextLevel() {
-    if (currentLevelIndex < levelFiles.size()) {
-        currentLevelIndex++;
-    }
-
-    if (!isLevelComplete()) {
-        loadCurrentLevel();
-    }
+    if (currentLevelIndex < static_cast<int>(levelFiles.size())) ++currentLevelIndex;
+    if (!isLevelComplete()) loadCurrentLevel();
 }
 
-
-// Check if all levels are finished
 bool LevelManager::isLevelComplete() const {
-    return currentLevelIndex >= levelFiles.size();
+    return currentLevelIndex >= static_cast<int>(levelFiles.size());
 }
 
-// Return the map reference
 const Map& LevelManager::getCurrentMap() const {
     return map;
 }
 
-// SCAN MAP FOR LIGHTS, MIRRORS, EXIT
+void LevelManager::setCurrentIndex(int idx) {
+    if (idx >= 0 && idx < static_cast<int>(levelFiles.size())) currentLevelIndex = idx;
+}
 
 LevelObjects LevelManager::scanObjects() const {
     LevelObjects objs;
-
-    for (int y = 0; y < map.getHeight(); ++y) {
-        for (int x = 0; x < map.getWidth(); ++x) {
-
-            TileType t = map.getTile(x, y);
-
-            switch (t) {
-                case TileType::LIGHT_SOURCE:
-                    objs.lightTiles.emplace_back(x, y);
-                    break;
-
-                case TileType::MIRROR:
-                    objs.mirrorTiles.emplace_back(x, y);
-                    break;
-
-                case TileType::END:
-                    objs.exitTile = {x, y};
-                    break;
-
-                default:
-                    break;
-            }
+    const Map& m = map;
+    for (int y = 0; y < m.getHeight(); ++y) {
+        for (int x = 0; x < m.getWidth(); ++x) {
+            TileType t = m.getTile(x, y);
+            if (t == TileType::LIGHT_SOURCE) objs.lightTiles.emplace_back(x, y);
+            else if (t == TileType::MIRROR) objs.mirrorTiles.emplace_back(x, y);
+            else if (t == TileType::END) objs.exitTile = {x, y};
         }
     }
-
     return objs;
 }

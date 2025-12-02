@@ -1,11 +1,10 @@
 #pragma once
-#include <string>
 #include <vector>
+#include <string>
 #include <SFML/System/Vector2.hpp>
-
 #include "components/Map.h"
 
-// Struct that stores all special tile positions for a level
+// Struct storing special tile positions for a level
 struct LevelObjects {
     std::vector<sf::Vector2i> lightTiles;
     std::vector<sf::Vector2i> mirrorTiles;
@@ -13,7 +12,6 @@ struct LevelObjects {
 };
 
 class LevelManager {
-
 public:
     LevelManager();
     ~LevelManager() = default;
@@ -26,11 +24,12 @@ public:
     const Map& getCurrentMap() const;
 
     LevelObjects scanObjects() const;
+    const std::vector<std::string>& getLevelFiles() const { return levelFiles; }
+    int getCurrentIndex() const { return currentLevelIndex; }
+    void setCurrentIndex(int idx);
 
 private:
     std::vector<std::string> levelFiles;
     int currentLevelIndex = 0;
-
-    // Active map instance
     Map map;
 };

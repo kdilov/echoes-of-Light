@@ -19,6 +19,7 @@
 #include "components/RenderComponent.h"
 #include "components/TransformComponent.h"
 #include "components/UpgradeComponent.h"
+#include "components/LevelManager.h"
 #include "GameSettings.h"
 
 // =============================================================
@@ -104,6 +105,19 @@ bool Game::initialize()
 
     if (!loadResources())
         return false;
+
+    levels_.setCurrentIndex(startLevelIndex_);
+
+    if (!levels_.loadCurrentLevel()) {
+        std::cerr << "ERROR: Failed to load starting level\n";
+        return false;
+    }
+
+    std::cout << "Loaded first level successfully.\n";
+
+    levels_.setCurrentIndex(startLevelIndex_);
+    if (!levels_.loadCurrentLevel()) {
+        std::cerr << "ERROR: Failed to load starting level\n";
 
     // Initialize dialog system
     if (!dialogSystem_.initialize(gameFont_)) {
@@ -546,4 +560,29 @@ std::string Game::findResourcePath(const std::string& relative) const
             return p;
 
     return relative;
+}
+
+bool Game::playerReachedExit() {
+    // get player's world position
+    auto* t = player_.getComponent<eol::TransformComponent>();
+    if (!t) return false;
+    sf::Vector2f ppos = t->getPosition();
+    // get exit tile world pos (from levels_.scanObjects)
+    LevelObjects objs = levels_.scanObjects();
+    if (objs.exitTile.x < 0) return false;
+    sf::Vector2f exitWorld(objs.exitTile.x * 32.f + 16.f, objs.exitTile.y * 32.f + 16.f);
+    float dist2 = (ppos.x - exitWorld.x)*(ppos.x - exitWorld.x) + (ppos.y - exitWorld.y)*(ppos.y - exitWorld.y);
+    return dist2 < (32.f * 0.5f) * (32.f * 0.5f); // within half tile
+
+    if (playerReachedExit()) {
+        levels_.nextLevel();
+        if (levels_.isLevelComplete()) {
+            // show victory, end game, or go to credits
+            window_.close();
+        } else {
+            // refresh entities for new level
+            createEntities();
+        }
+    }
+
 }
