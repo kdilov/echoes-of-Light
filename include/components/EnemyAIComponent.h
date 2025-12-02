@@ -33,6 +33,8 @@ public:
 
     void setState(BehaviorState state) noexcept;
     BehaviorState getState() const noexcept;
+    void setActive(bool active) noexcept;
+    bool isActive() const noexcept;
 
 private:
     std::vector<sf::Vector2f> m_patrolPoints;
@@ -41,6 +43,7 @@ private:
     float m_attackRange{60.f};
     float m_moveSpeed{85.f};
     BehaviorState m_state{BehaviorState::Patrol};
+    bool m_active{true};
 };
 
 } // namespace eol

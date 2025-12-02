@@ -64,6 +64,14 @@ EnemyAIComponent::BehaviorState EnemyAIComponent::getState() const noexcept {
     return m_state;
 }
 
+void EnemyAIComponent::setActive(bool active) noexcept {
+    m_active = active;
+}
+
+bool EnemyAIComponent::isActive() const noexcept {
+    return m_active;
+}
+
 } // namespace eol
 
 
