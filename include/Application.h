@@ -1,7 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <memory>
-#include "SceneStack.h"
+#include "scenes/SceneStack.h"
 #include "GameSettings.h"
 
 

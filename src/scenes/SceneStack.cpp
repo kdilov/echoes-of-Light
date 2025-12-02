@@ -1,4 +1,4 @@
-﻿#include "SceneStack.h"
+﻿#include "scenes/SceneStack.h"
 #include <algorithm>
 
 void SceneStack::pushScene(std::shared_ptr<Scene> scene)
