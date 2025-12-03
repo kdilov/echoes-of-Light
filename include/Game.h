@@ -53,6 +53,7 @@ private:
 
 private:
     bool initialized_;
+    bool playerReachedExit();
 
     sf::Texture idleTexture_;
     sf::Texture moveTexture_;

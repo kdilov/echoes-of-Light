@@ -70,7 +70,7 @@ void Map::draw(sf::RenderWindow& window, int tileSize) const {
             }
             if (tex) {
                 sf::Sprite s(*tex);
-                s.setPosition(static_cast<float>(x * tileSize), static_cast<float>(y * tileSize));
+                s.setPosition({ static_cast<float>(x * tileSize), static_cast<float>(y * tileSize) });
                 window.draw(s);
             }
         }

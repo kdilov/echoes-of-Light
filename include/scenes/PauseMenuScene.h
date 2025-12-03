@@ -1,7 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
-#include <memory>d
+#include <memory>
 #include "Scene.h"
 #include "Application.h"
 #include "GameSettings.h"

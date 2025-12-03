@@ -43,6 +43,8 @@ set(EOL_SOURCES
     src/components/PuzzleComponent.cpp
     src/components/UpgradeComponent.cpp
     src/components/CollisionComponent.cpp
+    src/components/LevelManager.cpp
+    src/components/Map.cpp
     src/systems/InputSystem.cpp
     src/systems/AnimationSystem.cpp
     src/systems/RenderSystem.cpp
