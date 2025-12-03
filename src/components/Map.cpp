@@ -55,6 +55,7 @@ void Map::setTextures(const sf::Texture& wallTex,
     emptyTexture = &emptyTex;
 }
 
+/*
 void Map::draw(sf::RenderWindow& window, int tileSize) const {
     if (width == 0 || height == 0) return;
     for (int y=0;y<height;++y) {
@@ -73,6 +74,47 @@ void Map::draw(sf::RenderWindow& window, int tileSize) const {
                 s.setPosition({ static_cast<float>(x * tileSize), static_cast<float>(y * tileSize) });
                 window.draw(s);
             }
+        }
+    }
+}
+*/
+
+void Map::draw(sf::RenderWindow& window, int tileSize) const {
+    if (width == 0 || height == 0) return;
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            TileType tile = getTile(x, y);
+
+            // Skip empty tiles (or draw floor)
+            sf::RectangleShape rect;
+            rect.setSize(sf::Vector2f(static_cast<float>(tileSize), static_cast<float>(tileSize)));
+            rect.setPosition(sf::Vector2f(static_cast<float>(x * tileSize), static_cast<float>(y * tileSize)));
+
+            // Color based on tile type
+            switch (tile) {
+            case TileType::WALL:
+                rect.setFillColor(sf::Color(80, 80, 100));  // Dark gray-blue
+                break;
+            case TileType::LIGHT_SOURCE:
+                rect.setFillColor(sf::Color(255, 255, 150));  // Yellow
+                break;
+            case TileType::MIRROR:
+                rect.setFillColor(sf::Color(150, 200, 255));  // Light blue
+                break;
+            case TileType::START:
+                rect.setFillColor(sf::Color(100, 255, 100));  // Green
+                break;
+            case TileType::END:
+                rect.setFillColor(sf::Color(255, 100, 100));  // Red
+                break;
+            case TileType::EMPTY:
+            default:
+                rect.setFillColor(sf::Color(30, 30, 40));  // Dark background
+                break;
+            }
+
+            window.draw(rect);
         }
     }
 }

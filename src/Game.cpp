@@ -523,6 +523,22 @@ void Game::update(float dt, sf::RenderWindow& window)
 // =============================================================
 void Game::render(sf::RenderWindow& window)
 {
+   
+   
+    // Calculate tile size to fit map to screen
+    const Map& map = levels_.getCurrentMap();
+    int tileSize = 32;  // default
+
+    if (map.getWidth() > 0 && map.getHeight() > 0) {
+        // Calculate tile size that fits the map to the reference resolution
+        int tileSizeX = static_cast<int>(GameSettings::width()) / map.getWidth();
+        int tileSizeY = static_cast<int>(GameSettings::height()) / map.getHeight();
+        tileSize = std::min(tileSizeX, tileSizeY);  // Use smaller to maintain aspect ratio
+    }
+
+    // Draw the map first (background layer)
+    map.draw(window, tileSize);
+
     renderSystem_.render(window, entities_);
     lightSystem_.render(window, entities_);
 
