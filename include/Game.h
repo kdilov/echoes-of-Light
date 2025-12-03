@@ -51,6 +51,13 @@ private:
     Entity createWallEntity(const sf::Vector2f& position,
         const sf::Vector2f& size);
 
+    // Tile size for current level
+    float tileSize_ = 0.f;
+    sf::Vector2f mapOffset_ = { 0.f, 0.f };
+
+    // Helper to convert tile coords to world coords
+    sf::Vector2f tileToWorld(int tileX, int tileY) const;
+
 private:
     bool initialized_;
     bool playerReachedExit();

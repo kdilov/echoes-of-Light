@@ -79,38 +79,36 @@ void Map::draw(sf::RenderWindow& window, int tileSize) const {
 }
 */
 
-void Map::draw(sf::RenderWindow& window, int tileSize) const {
+void Map::draw(sf::RenderWindow& window, float tileSize, sf::Vector2f offset) const {
     if (width == 0 || height == 0) return;
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             TileType tile = getTile(x, y);
 
-            // Skip empty tiles (or draw floor)
             sf::RectangleShape rect;
-            rect.setSize(sf::Vector2f(static_cast<float>(tileSize), static_cast<float>(tileSize)));
-            rect.setPosition(sf::Vector2f(static_cast<float>(x * tileSize), static_cast<float>(y * tileSize)));
+            rect.setSize(sf::Vector2f(tileSize, tileSize));
+            rect.setPosition(sf::Vector2f(offset.x + x * tileSize, offset.y + y * tileSize));
 
-            // Color based on tile type
             switch (tile) {
             case TileType::WALL:
-                rect.setFillColor(sf::Color(80, 80, 100));  // Dark gray-blue
+                rect.setFillColor(sf::Color(80, 80, 100));
                 break;
             case TileType::LIGHT_SOURCE:
-                rect.setFillColor(sf::Color(255, 255, 150));  // Yellow
+                rect.setFillColor(sf::Color(255, 255, 150));
                 break;
             case TileType::MIRROR:
-                rect.setFillColor(sf::Color(150, 200, 255));  // Light blue
+                rect.setFillColor(sf::Color(150, 200, 255));
                 break;
             case TileType::START:
-                rect.setFillColor(sf::Color(100, 255, 100));  // Green
+                rect.setFillColor(sf::Color(100, 255, 100));
                 break;
             case TileType::END:
-                rect.setFillColor(sf::Color(255, 100, 100));  // Red
+                rect.setFillColor(sf::Color(255, 100, 100));
                 break;
             case TileType::EMPTY:
             default:
-                rect.setFillColor(sf::Color(30, 30, 40));  // Dark background
+                rect.setFillColor(sf::Color(30, 30, 40));
                 break;
             }
 
@@ -131,7 +129,7 @@ bool Map::isWalkableTileCoord(int tx, int ty) const {
     return isWalkableTile(getTile(tx, ty));
 }
 
-bool Map::isWalkableWorld(float worldx, float worldy, int tileSize) const {
+bool Map::isWalkableWorld(float worldx, float worldy, float tileSize) const {
     int tx = static_cast<int>(worldx) / tileSize;
     int ty = static_cast<int>(worldy) / tileSize;
     return isWalkableTileCoord(tx, ty);

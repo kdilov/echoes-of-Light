@@ -29,12 +29,13 @@ public:
         const sf::Texture& startTex,
         const sf::Texture& endTex,
         const sf::Texture& emptyTex);
-    void draw(sf::RenderWindow& window, int tileSize = 32) const;
+    void draw(sf::RenderWindow& window, float tileSize, sf::Vector2f offset = { 0.f, 0.f }) const;
+
 
     // Collision helpers
     bool isWalkableTile(TileType t) const;
     bool isWalkableTileCoord(int tx, int ty) const;
-    bool isWalkableWorld(float worldx, float worldy, int tileSize = 32) const;
+    bool isWalkableWorld(float worldx, float worldy, float tileSize = 32) const;
 
 private:
     TileType charToTile(char c) const;
