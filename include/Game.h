@@ -33,7 +33,7 @@ private:
 
     LevelManager levels_;
     int startLevelIndex_ = 0;
-
+    void recalculateTileSize();
     
     void createEntities();
 

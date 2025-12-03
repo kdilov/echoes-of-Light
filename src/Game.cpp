@@ -115,18 +115,7 @@ bool Game::initialize()
     std::cout << "Loaded first level successfully.\n";
 
     // Calculate tile size for this level
-    const Map& map = levels_.getCurrentMap();
-    if (map.getWidth() > 0 && map.getHeight() > 0) {
-        float tileSizeX = GameSettings::width() / static_cast<float>(map.getWidth());
-        float tileSizeY = GameSettings::height() / static_cast<float>(map.getHeight());
-        tileSize_ = std::min(tileSizeX, tileSizeY);
-
-        // Calculate offset to center the map (if needed)
-        float mapPixelWidth = map.getWidth() * tileSize_;
-        float mapPixelHeight = map.getHeight() * tileSize_;
-        mapOffset_.x = (GameSettings::width() - mapPixelWidth) / 2.f;
-        mapOffset_.y = (GameSettings::height() - mapPixelHeight) / 2.f;
-    }
+    recalculateTileSize();
 
     
     // Initialize dialog system
@@ -243,9 +232,10 @@ void Game::createEntities()
                 break;
 
             case TileType::MIRROR:
-                addWorld(createMirrorEntity(worldPos,
-                    { 1, 1 },  // Default diagonal normal
-                    sf::Vector2f(tileSize_ * 0.8f, tileSize_ * 0.2f),
+                addWorld(createMirrorEntity(
+                    worldPos,
+                    { 1, 1 },
+                    GameSettings::relativeSize(0.052f, 0.015f),
                     eol::MirrorComponent::MirrorType::Flat));
                 break;
 
@@ -264,7 +254,7 @@ void Game::createEntities()
     }
     entities_.push_back(&player_);
 
-    // Create light beacon (you might want to place this from map too)
+    // Create light beacon (could place this as a tile from map )
     lightBeacon_ = createLightBeaconEntity();
     entities_.push_back(&lightBeacon_);
 
@@ -523,6 +513,31 @@ void Game::update(float dt, sf::RenderWindow& window)
         animationSystem_.update(entities_, dt);
         enemyAISystem_.update(entities_, dt, player_);
         combatSystem_.updateMeleeAttacks(entities_, dt);
+
+        // Check if player reached the exit
+        if (playerReachedExit()) {
+            levels_.nextLevel();
+
+            if (levels_.isLevelComplete()) {
+                // All levels complete - show victory message
+                dialogSystem_.startDialog({
+                    {"Narrator", "Congratulations! You have restored the light to all eras!"},
+                    {"King", "The kingdom is saved. You are a true hero!"}
+                    });
+                // Could also transition to a credits scene here
+            }
+            else {
+                // Load next level
+                recalculateTileSize();
+                createEntities();
+
+                // Show level transition dialog
+                dialogSystem_.startDialog({
+                    {"Narrator", "You have found the path forward..."},
+                    {"Narrator", "A new challenge awaits."}
+                    });
+            }
+        }
     }
 
     // Light system updates regardless (for visual effects)
@@ -589,11 +604,17 @@ bool Game::playerReachedExit() {
     LevelObjects objs = levels_.scanObjects();
     if (objs.exitTile.x < 0) return false;
 
-    sf::Vector2f exitWorld(objs.exitTile.x * 32.f + 16.f, objs.exitTile.y * 32.f + 16.f);
-    float dist2 = (ppos.x - exitWorld.x) * (ppos.x - exitWorld.x) +
-        (ppos.y - exitWorld.y) * (ppos.y - exitWorld.y);
+    // Convert exit tile to world coordinates (center of tile)
+    sf::Vector2f exitWorld = tileToWorld(objs.exitTile.x, objs.exitTile.y);
 
-    return dist2 < (32.f * 0.5f) * (32.f * 0.5f); // within half tile
+    // Check distance
+    float dx = ppos.x - exitWorld.x;
+    float dy = ppos.y - exitWorld.y;
+    float dist2 = dx * dx + dy * dy;
+
+    // Within half a tile
+    float threshold = tileSize_ * 0.5f;
+    return dist2 < (threshold * threshold);
 }
 
 sf::Vector2f Game::tileToWorld(int tileX, int tileY) const {
@@ -602,6 +623,22 @@ sf::Vector2f Game::tileToWorld(int tileX, int tileY) const {
         mapOffset_.x + (tileX + 0.5f) * tileSize_,
         mapOffset_.y + (tileY + 0.5f) * tileSize_
     );
+}
+
+void Game::recalculateTileSize()
+{
+    const Map& map = levels_.getCurrentMap();
+    if (map.getWidth() > 0 && map.getHeight() > 0) {
+        float tileSizeX = GameSettings::width() / static_cast<float>(map.getWidth());
+        float tileSizeY = GameSettings::height() / static_cast<float>(map.getHeight());
+        tileSize_ = std::min(tileSizeX, tileSizeY);
+
+        // Calculate offset to center the map
+        float mapPixelWidth = map.getWidth() * tileSize_;
+        float mapPixelHeight = map.getHeight() * tileSize_;
+        mapOffset_.x = (GameSettings::width() - mapPixelWidth) / 2.f;
+        mapOffset_.y = (GameSettings::height() - mapPixelHeight) / 2.f;
+    }
 }
 
 
