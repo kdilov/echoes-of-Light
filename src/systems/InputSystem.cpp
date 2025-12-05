@@ -221,7 +221,7 @@ void InputSystem::handlePickupDrop(Entity& player, std::vector<Entity*>& entitie
     m_pickupKeyWasPressed = ePressed;
 }
 
-// Rotate the carried mirror by 90 degrees when R is pressed
+// Rotate the carried mirror by 45 degrees when R is pressed
 void InputSystem::handleMirrorRotation(Entity& player) {
     bool rPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R);
 
