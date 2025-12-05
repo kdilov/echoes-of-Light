@@ -69,6 +69,7 @@ LevelObjects LevelManager::scanObjects() const {
             TileType t = m.getTile(x, y);
             if (t == TileType::LIGHT_SOURCE) objs.lightTiles.emplace_back(x, y);
             else if (t == TileType::MIRROR) objs.mirrorTiles.emplace_back(x, y);
+            else if (t == TileType::SPAWNER) objs.spawnerTiles.emplace_back(x, y);
             else if (t == TileType::END) objs.exitTile = {x, y};
         }
     }

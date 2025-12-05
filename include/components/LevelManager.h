@@ -8,6 +8,7 @@
 struct LevelObjects {
     std::vector<sf::Vector2i> lightTiles;
     std::vector<sf::Vector2i> mirrorTiles;
+    std::vector<sf::Vector2i> spawnerTiles;
     sf::Vector2i exitTile { -1, -1 };
 };
 

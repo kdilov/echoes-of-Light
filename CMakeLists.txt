@@ -45,6 +45,8 @@ set(EOL_SOURCES
     src/components/CollisionComponent.cpp
     src/components/LevelManager.cpp
     src/components/Map.cpp
+    src/components/SpawnerComponent.cpp
+    src/systems/SpawnerSystem.cpp
     src/systems/InputSystem.cpp
     src/systems/AnimationSystem.cpp
     src/systems/RenderSystem.cpp
@@ -57,7 +59,7 @@ set(EOL_SOURCES
     
 )
 
-add_executable(echoes-of-light ${EOL_SOURCES}   "src/scenes/SceneStack.cpp" "src/Application.cpp" "src/scenes/MainMenuScene.cpp" "src/scenes/PauseMenuScene.cpp" "src/scenes/GameplayScene.cpp")
+add_executable(echoes-of-light ${EOL_SOURCES}   "src/scenes/SceneStack.cpp" "src/Application.cpp" "src/scenes/MainMenuScene.cpp" "src/scenes/PauseMenuScene.cpp" "src/scenes/GameplayScene.cpp" "include/components/SpawnerComponent.h")
 target_include_directories(echoes-of-light PRIVATE ${SFML_INCS} include)
 target_link_libraries(echoes-of-light sfml-graphics)
 

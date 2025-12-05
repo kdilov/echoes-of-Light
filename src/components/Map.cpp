@@ -9,6 +9,7 @@ TileType Map::charToTile(char c) const {
         case '/': return TileType::MIRROR;
         case 'S': return TileType::START;
         case 'E': return TileType::END;
+        case 'X': return TileType::SPAWNER;
         default:  return TileType::EMPTY;
     }
 }

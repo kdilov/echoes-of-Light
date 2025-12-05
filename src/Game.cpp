@@ -20,7 +20,9 @@
 #include "components/TransformComponent.h"
 #include "components/UpgradeComponent.h"
 #include "components/LevelManager.h"
+#include "components/SpawnerComponent.h"
 #include "GameSettings.h"
+
 
 // =============================================================
 //   Helper Image Generators (unchanged from your original)
@@ -132,6 +134,10 @@ bool Game::initialize()
         {"Hero", "I will not fail you, my lord."}
         });
 
+    // Setting up Enemy spawner system with enemy factory  
+    spawnerSystem_.setEnemyFactory([this](const sf::Vector2f& position) {
+        return createEnemyAtPosition(position);
+        });
 
     createEntities();
 
@@ -237,6 +243,14 @@ void Game::createEntities()
                     { 1, 1 },
                     GameSettings::relativeSize(0.052f, 0.015f),
                     eol::MirrorComponent::MirrorType::Flat));
+                break;
+
+            case TileType::SPAWNER:
+                addWorld(createSpawnerEntity(
+                    worldPos,
+                    5.f,    // Spawn every 5 seconds
+                    2       // Max 2 enemies per spawner
+                ));
                 break;
 
             case TileType::EMPTY:
@@ -499,6 +513,48 @@ Entity Game::createWallEntity(const sf::Vector2f& pos, const sf::Vector2f& size)
     return e;
 }
 
+Entity Game::createSpawnerEntity(const sf::Vector2f& position, float interval, int maxEnemies)
+{
+    Entity e;
+    e.name = "Spawner";
+
+    // Position only - (invisible)
+    e.components.emplace_back(std::make_unique<eol::TransformComponent>(
+        position,
+        sf::Vector2f{ 1.f, 1.f },
+        0.f));
+
+    // Spawner settings
+    auto spawner = std::make_unique<eol::SpawnerComponent>();
+    spawner->setSpawnInterval(interval);
+    spawner->setMaxEnemies(maxEnemies);
+    e.components.emplace_back(std::move(spawner));
+
+    return e;
+}
+
+Entity Game::createEnemyAtPosition(const sf::Vector2f& position)
+{
+    // Create a standard enemy using existing function
+    Entity e = createEnemyEntity();
+
+    // Override the position
+    if (auto* transform = e.getComponent<eol::TransformComponent>()) {
+        transform->setPosition(position);
+    }
+
+    // Update patrol points to be around the spawn position
+    if (auto* ai = e.getComponent<eol::EnemyAIComponent>()) {
+        ai->setPatrolPoints({
+            position,
+            position + sf::Vector2f{-GameSettings::relativeX(0.1f), 0.f},
+            position + sf::Vector2f{GameSettings::relativeX(0.1f), 0.f}
+            });
+    }
+
+    return e;
+}
+
 // =============================================================
 //   UPDATE (Scene system calls this)
 // =============================================================
@@ -513,6 +569,15 @@ void Game::update(float dt, sf::RenderWindow& window)
         animationSystem_.update(entities_, dt);
         enemyAISystem_.update(entities_, dt, player_);
         combatSystem_.updateMeleeAttacks(entities_, dt);
+
+        // Update spawners and add new enemies
+        std::vector<Entity> newEnemies = spawnerSystem_.update(entities_, dt);
+        for (auto& enemy : newEnemies) {
+            auto ptr = std::make_unique<Entity>(std::move(enemy));
+            entities_.push_back(ptr.get());
+            worldObjects_.push_back(std::move(ptr));
+        }
+
 
         // Check if player reached the exit
         if (playerReachedExit()) {

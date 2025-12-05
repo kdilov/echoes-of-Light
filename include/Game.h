@@ -8,6 +8,7 @@
 #include "GameSettings.h"
 #include "systems/DialogSystem.h"
 #include "components/LevelManager.h"
+#include "systems/SpawnerSystem.h"
 
 class Game
 {
@@ -50,6 +51,11 @@ private:
         bool movable);
     Entity createWallEntity(const sf::Vector2f& position,
         const sf::Vector2f& size);
+    Entity createSpawnerEntity(const sf::Vector2f& position,
+        float interval,
+        int maxEnemies);
+    Entity createEnemyAtPosition(const sf::Vector2f& position);
+
 
     // Tile size for current level
     float tileSize_ = 0.f;
@@ -76,6 +82,7 @@ private:
     
     std::vector<std::unique_ptr<Entity>> worldObjects_;
 
+
     
     InputSystem inputSystem_;
     AnimationSystem animationSystem_;
@@ -83,7 +90,7 @@ private:
     CombatSystem combatSystem_;
     EnemyAISystem enemyAISystem_;
     LightSystem lightSystem_;
-
+    SpawnerSystem spawnerSystem_;
 
 
     

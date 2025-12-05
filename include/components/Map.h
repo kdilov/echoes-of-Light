@@ -9,7 +9,8 @@ enum class TileType {
     LIGHT_SOURCE,
     MIRROR,
     START,
-    END
+    END,
+    SPAWNER
 };
 
 class Map {
