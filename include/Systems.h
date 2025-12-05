@@ -173,13 +173,14 @@ private:
     std::optional<sf::FloatRect> computeBounds(Entity& entity) const;
     std::optional<sf::FloatRect> computeMirrorBounds(Entity& entity) const;
     void handleBeamImpact(Entity& owner, Entity& target, float intensity, const sf::Vector2f& hitPoint);
-    void applyPuzzleLight(Entity& entity, float intensity);
+    void applyPuzzleLight(Entity& source, Entity& entity, float intensity);
     sf::Vector2f reflect(const sf::Vector2f& direction, const sf::Vector2f& normal) const;
     void ensureOverlaySize(const sf::RenderTarget& target);
     void drawBeams(sf::RenderTarget& target) const;
     void drawOverlay(sf::RenderTarget& target) const;
     void drawDebugData(sf::RenderTarget& target) const;
     void drawLightGlows(sf::RenderTarget& target, std::vector<Entity*>& entities);
+    void drawLightBeacons(sf::RenderTarget& target, std::vector<Entity*>& entities);
 
 private:
     std::vector<BeamSegment> m_beamSegments;

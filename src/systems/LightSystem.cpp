@@ -7,6 +7,7 @@
 #include "components/LightSourceComponent.h"
 #include "components/MirrorComponent.h"
 #include "components/PuzzleComponent.h"
+#include "components/PlayerComponent.h"
 #include "components/RenderComponent.h"
 #include "components/TransformComponent.h"
 #include "GameSettings.h"
@@ -88,6 +89,7 @@ void LightSystem::update(std::vector<Entity*>& entities, float deltaTime, const 
 void LightSystem::render(sf::RenderTarget& target, std::vector<Entity*>& entities) {
     ensureOverlaySize(target);
     drawLightGlows(target, entities);
+    drawLightBeacons(target, entities);
     drawOverlay(target);
     drawBeams(target);
     if (m_debugOverlay) {
@@ -147,6 +149,13 @@ void LightSystem::updateEmitters(std::vector<Entity*>& entities,
             continue;
         }
 
+        if (auto* source = entity->getComponent<eol::LightSourceComponent>()) {
+            if (auto* puzzle = entity->getComponent<eol::PuzzleComponent>()) {
+                const bool shouldEmit = source->isActive() && puzzle->isSolved();
+                emitter->setTriggerHeld(shouldEmit);
+            }
+        }
+
         emitter->advanceCooldown(deltaTime);
 
         if (!emitter->isTriggerHeld() || !emitter->canFire()) {
@@ -199,6 +208,8 @@ void LightSystem::castBeam(Entity& owner,
     float remainingRange = range;
     float currentIntensity = intensity;
 
+    const bool ownerIsEnemy = owner.getComponent<eol::EnemyComponent>() != nullptr;
+
     while (remainingRange > 4.f && currentIntensity > 0.1f) {
         float nearestDistance = remainingRange;
         Entity* hitEntity = nullptr;
@@ -207,6 +218,10 @@ void LightSystem::castBeam(Entity& owner,
 
         for (Entity* candidate : entities) {
             if (!candidate || candidate == &owner) {
+                continue;
+            }
+
+            if (!ownerIsEnemy && candidate->getComponent<eol::PlayerComponent>()) {
                 continue;
             }
 
@@ -483,7 +498,7 @@ std::optional<sf::FloatRect> LightSystem::computeBounds(Entity& entity) const {
 }
 
 void LightSystem::handleBeamImpact(Entity& owner, Entity& target, float intensity, const sf::Vector2f& hitPoint) {
-    applyPuzzleLight(target, intensity);
+    applyPuzzleLight(owner, target, intensity);
     m_combat.applyBeamHit(owner, target, intensity, hitPoint);
 
     if (auto* light = target.getComponent<eol::LightComponent>()) {
@@ -502,13 +517,35 @@ void LightSystem::handleBeamImpact(Entity& owner, Entity& target, float intensit
     }
 }
 
-void LightSystem::applyPuzzleLight(Entity& entity, float intensity) {
+void LightSystem::applyPuzzleLight(Entity& source, Entity& entity, float intensity) {
     auto* puzzle = entity.getComponent<eol::PuzzleComponent>();
     if (!puzzle || puzzle->isSolved()) {
         return;
     }
 
+    const bool isPlayerSource = source.getComponent<eol::PlayerComponent>() != nullptr;
+    const bool isBeaconSource = source.getComponent<eol::LightSourceComponent>() != nullptr || source.name == "LightBeacon";
+
+    switch (puzzle->getLightRequirement()) {
+    case eol::PuzzleComponent::LightRequirement::PlayerOnly:
+        if (!isPlayerSource) {
+            return;
+        }
+        break;
+    case eol::PuzzleComponent::LightRequirement::BeaconOnly:
+        if (!isBeaconSource) {
+            return;
+        }
+        break;
+    case eol::PuzzleComponent::LightRequirement::Any:
+    default:
+        break;
+    }
+
     puzzle->addReceivedLight(intensity * 0.1f);
+    std::cout << "[LightSystem] Puzzle " << entity.name << " received " << intensity * 0.1f << " light." << std::endl;
+    std::cout << "[LightSystem] Puzzle " << entity.name << " accumulated " << puzzle->getAccumulatedLight() << " light." << std::endl;
+    std::cout << "[LightSystem] Puzzle " << entity.name << " required " << puzzle->getRequiredLight() << " light." << std::endl;
     if (puzzle->getAccumulatedLight() >= static_cast<float>(puzzle->getRequiredLight())) {
         puzzle->setSolved(true);
         std::cout << "[LightSystem] Beacon " << entity.name << " reactivated." << std::endl;
@@ -668,6 +705,67 @@ void LightSystem::drawLightGlows(sf::RenderTarget& target, std::vector<Entity*>&
         outer.setPosition(center);
         outer.setFillColor(sf::Color(255, 244, 214, outerAlpha));
         target.draw(outer, addState);
+    }
+}
+
+void LightSystem::drawLightBeacons(sf::RenderTarget& target, std::vector<Entity*>& entities) {
+    sf::RenderStates addState;
+    addState.blendMode = sf::BlendAdd;
+
+    for (Entity* entity : entities) {
+        if (!entity) continue;
+
+        auto* source = entity->getComponent<eol::LightSourceComponent>();
+        auto* puzzle = entity->getComponent<eol::PuzzleComponent>();
+        if (!source || !source->isActive() || !puzzle || !puzzle->isSolved()) {
+            continue;
+        }
+
+        sf::Vector2f center;
+        float footprint = 48.f;
+        if (auto bounds = computeBounds(*entity)) {
+            center = rectCenter(*bounds);
+            footprint = std::max(bounds->size.x, bounds->size.y);
+        }
+        else if (auto* transform = entity->getComponent<eol::TransformComponent>()) {
+            center = transform->getPosition();
+            footprint = std::max(transform->getScale().x, transform->getScale().y) * 32.f;
+        }
+        else {
+            continue;
+        }
+
+        const float baseWidth = std::max(footprint * 0.85f, 60.f);
+        const float innerWidth = baseWidth * 0.45f;
+        const float beamHeight = std::max(GameSettings::refHeight * 0.55f, center.y);
+        const float topY = std::max(0.f, center.y - beamHeight);
+        const float bottomY = center.y + std::max(footprint * 0.25f, 10.f);
+
+        sf::VertexArray outer(sf::PrimitiveType::TriangleStrip, 4);
+        sf::Color outerTop(120, 190, 255, 0);
+        sf::Color outerBottom(255, 240, 200, 110);
+        outer[0].position = sf::Vector2f(center.x - baseWidth, topY);
+        outer[0].color = outerTop;
+        outer[1].position = sf::Vector2f(center.x - baseWidth * 0.4f, bottomY);
+        outer[1].color = outerBottom;
+        outer[2].position = sf::Vector2f(center.x + baseWidth, topY);
+        outer[2].color = outerTop;
+        outer[3].position = sf::Vector2f(center.x + baseWidth * 0.4f, bottomY);
+        outer[3].color = outerBottom;
+        target.draw(outer, addState);
+
+        sf::VertexArray inner(sf::PrimitiveType::TriangleStrip, 4);
+        sf::Color innerTop(255, 255, 230, 35);
+        sf::Color innerBottom(255, 255, 215, 210);
+        inner[0].position = sf::Vector2f(center.x - innerWidth, topY);
+        inner[0].color = innerTop;
+        inner[1].position = sf::Vector2f(center.x - innerWidth * 0.35f, bottomY);
+        inner[1].color = innerBottom;
+        inner[2].position = sf::Vector2f(center.x + innerWidth, topY);
+        inner[2].color = innerTop;
+        inner[3].position = sf::Vector2f(center.x + innerWidth * 0.35f, bottomY);
+        inner[3].color = innerBottom;
+        target.draw(inner, addState);
     }
 }
 

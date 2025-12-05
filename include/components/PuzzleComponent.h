@@ -6,6 +6,12 @@ namespace eol {
 
 class PuzzleComponent : public Component {
 public:
+    enum class LightRequirement {
+        Any,
+        PlayerOnly,
+        BeaconOnly
+    };
+
     PuzzleComponent();
 
     unsigned int getRequiredLight() const noexcept;
@@ -18,10 +24,14 @@ public:
     bool isSolved() const noexcept;
     void setSolved(bool solved) noexcept;
 
+    void setLightRequirement(LightRequirement requirement) noexcept;
+    LightRequirement getLightRequirement() const noexcept;
+
 private:
     unsigned int m_requiredLight{1};
     float m_receivedLight{0.f};
     bool m_solved{false};
+    LightRequirement m_requirement{LightRequirement::Any};
 };
 
 } // namespace eol
