@@ -18,6 +18,9 @@ sf::Vector2f normalizeVector(const sf::Vector2f& value) {
         return sf::Vector2f{1.f, 0.f};
     }
     return sf::Vector2f{value.x / length, value.y / length};
+
+    sf::Vector2f rotateVector90(const sf::Vector2f & v) {
+        return sf::Vector2f{ v.y, -v.x };
 }
 }
 
@@ -72,6 +75,7 @@ void InputSystem::updateWithCollision(Entity& player,
 
     handlePickupDrop(player, entities);
     playerComp->tickInvulnerability(deltaTime);
+    handleMirrorRotation(player);
 
     sf::Vector2f movement = getMovementInput();
     const bool isMoving = (movement.x != 0.f || movement.y != 0.f);
@@ -207,5 +211,41 @@ void InputSystem::handlePickupDrop(Entity& player, std::vector<Entity*>& entitie
         }
     }
     m_pickupKeyWasPressed = ePressed;
+}
+
+// Rotate the carried mirror by 90 degrees when R is pressed
+void InputSystem::handleMirrorRotation(Entity& player) {
+    bool rPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R);
+
+    // Only trigger on key press, not hold
+    if (rPressed && !m_rotateKeyWasPressed) {
+        auto* playerComp = player.getComponent<eol::PlayerComponent>();
+        if (!playerComp || !playerComp->isCarrying()) {
+            m_rotateKeyWasPressed = rPressed;
+            return;
+        }
+
+        Entity* carried = playerComp->getCarriedEntity();
+        if (!carried) {
+            m_rotateKeyWasPressed = rPressed;
+            return;
+        }
+
+        // Get mirror and transform components
+        auto* mirror = carried->getComponent<eol::MirrorComponent>();
+        auto* transform = carried->getComponent<eol::TransformComponent>();
+
+        if (mirror && transform) {
+            // Rotate the mirror's normal by 90 degrees (affects light reflection)
+            sf::Vector2f currentNormal = mirror->getNormal();
+            sf::Vector2f newNormal = rotateVector90(currentNormal);
+            mirror->setNormal(newNormal);
+
+            // Rotate the visual transform by 90 degrees (so sprite looks correct)
+            float currentRotation = transform->getRotation();
+            transform->setRotation(currentRotation + 90.f);
+        }
+    }
+    m_rotateKeyWasPressed = rPressed;
 }
 

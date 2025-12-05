@@ -50,7 +50,9 @@ private:
     void updatePlayerEmitter(Entity& player, const sf::RenderWindow& window);
 
     void handlePickupDrop(Entity& player, std::vector<Entity*>& entities);
+    void handleMirrorRotation(Entity& player);
     bool m_pickupKeyWasPressed{ false };
+    bool m_rotateKeyWasPressed{ false };
 };
 
 // ANIMATION SYSTEM - Updates all entity animations
