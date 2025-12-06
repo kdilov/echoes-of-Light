@@ -126,25 +126,24 @@ bool Game::initialize()
         return false;
     }
 
-    // Show intro dialog when game starts
-    dialogSystem_.startDialog({
-        {"Narrator", "The kingdom has fallen into darkness..."},
-        {"Narrator", "Only one hero remains who can restore the light."},
-        {"King", "You must travel through the echoes of time to save us."},
-        {"Hero", "I will not fail you, my lord."},
-        {"Guide", "Before you begin your journey, let me teach you the ways of light."},
-        {"Guide", "Use WASD to move. Your character follows your command."},
-        {"Guide", "Point with your MOUSE and click or press SPACE to emit a beam of light."},
-        {"Guide", "See that glowing beacon ahead? It awaits your light to awaken."},
-        {"Guide", "Aim your light at the FIRST BEACON and hold to charge it."},
-        {"Guide", "Once awakened, beacons emit their own light upward."},
-        {"Guide", "The SECOND BEACON requires light from TWO sources to ignite..."},
-        {"Guide", "You will need to redirect the first beacon's light using a MIRROR."},
-        {"Guide", "Press E near a mirror to pick it up. Press R to rotate it."},
-        {"Guide", "Position the mirror so the first beacon's light reaches the second."},
-        {"Guide", "When all beacons shine, the EXIT will open. Find the red tile."},
-        {"Guide", "Now go, Hero. Show me you understand the ways of light."}
-        });
+    // Check if this is the tutorial level (index 0)
+    if (levels_.getCurrentIndex() == 0) {
+        // Start interactive tutorial - only show intro + first instruction
+        tutorialStep_ = TutorialStep::WaitForMove;
+        tutorialActionDetected_ = false;
+        dialogSystem_.startDialog({
+            {"Narrator", "The kingdom has fallen into darkness..."},
+            {"Narrator", "Only one hero remains who can restore the light."},
+            {"King", "You must travel through the echoes of time to save us."},
+            {"Hero", "I will not fail you, my lord."},
+            {"Guide", "Before you begin your journey, let me teach you the ways of light."},
+            {"Guide", "Use WASD to move. Try it now!"}
+            });
+    }
+    else {
+        // Non-tutorial levels - no interactive tutorial
+        tutorialStep_ = TutorialStep::None;
+    }
 
     // Setting up Enemy spawner system with enemy factory  
     spawnerSystem_.setEnemyFactory([this](const sf::Vector2f& position) {
@@ -641,6 +640,11 @@ void Game::update(float dt, sf::RenderWindow& window)
     // Update dialog system first
     dialogSystem_.update(dt);
 
+    // Update interactive tutorial (checks for player actions)
+    if (tutorialStep_ != TutorialStep::None && tutorialStep_ != TutorialStep::Complete) {
+        updateTutorial();
+    }
+
     // Only update gameplay if dialog is not active (pauses game during dialog)
     if (!dialogSystem_.isActive()) {
         inputSystem_.updateWithCollision(player_, dt, window, entities_);
@@ -658,7 +662,8 @@ void Game::update(float dt, sf::RenderWindow& window)
 
 
         // Check if all beacons just got solved (show message once)
-        if (allBeaconsJustSolved()) {
+        // Skip this message during tutorial - the tutorial system handles it
+        if (tutorialStep_ == TutorialStep::None && allBeaconsJustSolved()) {
             dialogSystem_.startDialog({
                 {"Guide", "The beacons shine bright! The path forward is open."},
                 {"Guide", "Make your way to the EXIT."}
@@ -889,6 +894,247 @@ bool Game::allBeaconsJustSolved() {
     return false;
 }
 
+void Game::updateTutorial() {
+    // Don't check while dialog is showing - let player read first
+    if (dialogSystem_.isActive()) {
+        return;
+    }
+
+    bool actionPerformed = false;
+
+    switch (tutorialStep_) {
+    case TutorialStep::WaitForMove:
+        // Check if player pressed any movement key
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) ||
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) ||
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) ||
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
+            tutorialActionDetected_ = true;
+        }
+        // Only advance after key is released (confirms they actually tried it)
+        if (tutorialActionDetected_ &&
+            !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) &&
+            !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) &&
+            !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) &&
+            !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
+            actionPerformed = true;
+        }
+        break;
+
+    case TutorialStep::WaitForShoot:
+        // Check if player shot light
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) ||
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
+            tutorialActionDetected_ = true;
+        }
+        if (tutorialActionDetected_ &&
+            !sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) &&
+            !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
+            actionPerformed = true;
+        }
+        break;
+
+    case TutorialStep::WaitForBeacon1:
+        // Check if first beacon (requires 1 source) is activated
+        for (Entity* beacon : beacons_) {
+            if (!beacon) continue;
+            auto* puzzle = beacon->getComponent<eol::PuzzleComponent>();
+            if (puzzle && puzzle->getRequiredUniqueSources() == 1 && puzzle->isSolved()) {
+                actionPerformed = true;
+                break;
+            }
+        }
+        break;
+
+    case TutorialStep::WaitForMirrorPickup:
+        // Check if player picked up a MIRROR specifically
+    {
+        auto* playerComp = player_.getComponent<eol::PlayerComponent>();
+        if (playerComp && playerComp->isCarrying()) {
+            Entity* carried = playerComp->getCarriedEntity();
+            if (carried && carried->getComponent<eol::MirrorComponent>()) {
+                actionPerformed = true;
+            }
+        }
+    }
+    break;
+
+    case TutorialStep::WaitForMirrorRotate:
+        // Check if R key was pressed while carrying mirror
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R)) {
+            auto* playerComp = player_.getComponent<eol::PlayerComponent>();
+            if (playerComp && playerComp->isCarrying()) {
+                Entity* carried = playerComp->getCarriedEntity();
+                if (carried && carried->getComponent<eol::MirrorComponent>()) {
+                    tutorialActionDetected_ = true;
+                }
+            }
+        }
+        if (tutorialActionDetected_ && !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R)) {
+            actionPerformed = true;
+        }
+        break;
+
+    case TutorialStep::WaitForMirrorDrop:
+        // Check if player dropped the mirror (no longer carrying anything)
+    {
+        auto* playerComp = player_.getComponent<eol::PlayerComponent>();
+        if (playerComp && !playerComp->isCarrying()) {
+            actionPerformed = true;
+        }
+    }
+    break;
+
+    case TutorialStep::WaitForBeaconPickup:
+        // Check if player picked up a BEACON specifically (has LightSourceComponent)
+    {
+        auto* playerComp = player_.getComponent<eol::PlayerComponent>();
+        if (playerComp && playerComp->isCarrying()) {
+            Entity* carried = playerComp->getCarriedEntity();
+            if (carried && carried->getComponent<eol::LightSourceComponent>()) {
+                actionPerformed = true;
+            }
+        }
+    }
+    break;
+
+    case TutorialStep::WaitForBeaconRotate:
+        // Check if R key was pressed while carrying beacon
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R)) {
+            auto* playerComp = player_.getComponent<eol::PlayerComponent>();
+            if (playerComp && playerComp->isCarrying()) {
+                Entity* carried = playerComp->getCarriedEntity();
+                if (carried && carried->getComponent<eol::LightSourceComponent>()) {
+                    tutorialActionDetected_ = true;
+                }
+            }
+        }
+        if (tutorialActionDetected_ && !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R)) {
+            actionPerformed = true;
+        }
+        break;
+
+    case TutorialStep::WaitForBeaconDrop:
+        // Check if player dropped the beacon
+    {
+        auto* playerComp = player_.getComponent<eol::PlayerComponent>();
+        if (playerComp && !playerComp->isCarrying()) {
+            actionPerformed = true;
+        }
+    }
+    break;
+
+    case TutorialStep::WaitForBeacon2:
+        // Check if all beacons are solved
+        if (isBeaconPuzzleSolved()) {
+            actionPerformed = true;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    if (actionPerformed) {
+        advanceTutorial();
+    }
+}
+
+void Game::advanceTutorial() {
+    // Reset action flag for next step
+    tutorialActionDetected_ = false;
+
+    switch (tutorialStep_) {
+    case TutorialStep::WaitForMove:
+        tutorialStep_ = TutorialStep::WaitForShoot;
+        dialogSystem_.startDialog({
+            {"Guide", "Excellent! You move with grace."},
+            {"Guide", "Now point your MOUSE and LEFT CLICK or press SPACE to emit light."},
+            {"Guide", "Try it now!"}
+            });
+        break;
+
+    case TutorialStep::WaitForShoot:
+        tutorialStep_ = TutorialStep::WaitForBeacon1;
+        dialogSystem_.startDialog({
+            {"Guide", "Your light shines bright!"},
+            {"Guide", "See that beacon ahead? It needs your light to awaken."},
+            {"Guide", "Aim your beam at the FIRST BEACON and hold until it activates!"}
+            });
+        break;
+
+    case TutorialStep::WaitForBeacon1:
+        tutorialStep_ = TutorialStep::WaitForMirrorPickup;
+        dialogSystem_.startDialog({
+            {"Guide", "The first beacon awakens! See how it emits light upward?"},
+            {"Guide", "Now find the MIRROR nearby. Walk close and press E to pick it up."}
+            });
+        break;
+
+    case TutorialStep::WaitForMirrorPickup:
+        tutorialStep_ = TutorialStep::WaitForMirrorRotate;
+        dialogSystem_.startDialog({
+            {"Guide", "You've grabbed the mirror! It follows you now."},
+            {"Guide", "Press R to ROTATE the mirror 45 degrees. Try it!"}
+            });
+        break;
+
+    case TutorialStep::WaitForMirrorRotate:
+        tutorialStep_ = TutorialStep::WaitForMirrorDrop;
+        dialogSystem_.startDialog({
+            {"Guide", "Perfect! Mirrors redirect light beams."},
+            {"Guide", "Press E to DROP the mirror where you want it."}
+            });
+        break;
+
+    case TutorialStep::WaitForMirrorDrop:
+        tutorialStep_ = TutorialStep::WaitForBeaconPickup;
+        dialogSystem_.startDialog({
+            {"Guide", "Good! The mirror is placed."},
+            {"Guide", "Did you know? Beacons can ALSO be picked up and rotated!"},
+            {"Guide", "Walk to the BEACON and press E to pick it up."}
+            });
+        break;
+
+    case TutorialStep::WaitForBeaconPickup:
+        tutorialStep_ = TutorialStep::WaitForBeaconRotate;
+        dialogSystem_.startDialog({
+            {"Guide", "You're carrying the beacon! Its light follows you now."},
+            {"Guide", "Press R to ROTATE the beacon's light direction. Try it!"}
+            });
+        break;
+
+    case TutorialStep::WaitForBeaconRotate:
+        tutorialStep_ = TutorialStep::WaitForBeaconDrop;
+        dialogSystem_.startDialog({
+            {"Guide", "Excellent! You can aim the beacon's light wherever you need it."},
+            {"Guide", "Press E to DROP the beacon."}
+            });
+        break;
+
+    case TutorialStep::WaitForBeaconDrop:
+        tutorialStep_ = TutorialStep::WaitForBeacon2;
+        dialogSystem_.startDialog({
+            {"Guide", "Now for the final challenge!"},
+            {"Guide", "The SECOND BEACON needs light from TWO sources to activate."},
+            {"Guide", "Use the mirror to redirect the first beacon's light to beacon 2."},
+            {"Guide", "Then add YOUR light to the second beacon as well!"}
+            });
+        break;
+
+    case TutorialStep::WaitForBeacon2:
+        tutorialStep_ = TutorialStep::Complete;
+        dialogSystem_.startDialog({
+            {"Guide", "BRILLIANT! All beacons shine!"},
+            {"Guide", "The EXIT is now open - find the red tile to proceed."},
+            {"Guide", "You have mastered the basics. Your real journey begins now!"}
+            });
+        break;
+
+    default:
+        break;
+    }
+}
 
 
 

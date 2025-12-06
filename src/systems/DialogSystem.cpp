@@ -43,7 +43,7 @@ bool DialogSystem::initialize(const sf::Font& font) {
     m_dialogText->setCharacterSize(textSize);
     m_continueIndicator->setCharacterSize(indicatorSize);
     
-    m_continueIndicator->setString("Press SPACE to continue...");
+    m_continueIndicator->setString("Press ENTER to continue...");
     m_continueIndicator->setFillColor(sf::Color(200, 200, 200, 180));
     
     // Set up box geometry
@@ -187,8 +187,7 @@ void DialogSystem::update(float deltaTime) {
     }
     
     // Handle input (real-time polling for responsiveness)
-    bool advancePressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) ||
-                          sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Enter);
+    bool advancePressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Enter);
     
     if (advancePressed && !m_advanceKeyWasPressed) {
         advance();

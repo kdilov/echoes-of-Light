@@ -73,6 +73,27 @@ private:
     bool allBeaconsJustSolved();
     bool beaconsPreviouslySolved_ = false;
 
+    // Interactive tutorial system
+    enum class TutorialStep {
+        None,           // Not in tutorial or tutorial disabled
+        WaitForMove,    // Waiting for WASD input
+        WaitForShoot,
+        WaitForBeacon1,
+        WaitForMirrorPickup,   // Pick up mirror first
+        WaitForMirrorRotate,   // Rotate mirror
+        WaitForMirrorDrop,     // Drop the mirror
+        WaitForBeaconPickup,   // Then pick up beacon
+        WaitForBeaconRotate,   // Rotate beacon
+        WaitForBeaconDrop,     // Drop the beacon
+        WaitForBeacon2, // Waiting for beacon 2 to activate
+        Complete        // Tutorial finished
+    };
+    TutorialStep tutorialStep_ = TutorialStep::None;
+    bool tutorialActionDetected_ = false;  // Tracks if current action was performed
+    void updateTutorial();
+    void advanceTutorial();
+
+
     sf::Texture idleTexture_;
     sf::Texture moveTexture_;
     sf::Texture debugWhiteTexture_;
