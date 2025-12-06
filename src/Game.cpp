@@ -356,13 +356,32 @@ Entity Game::createLightBeaconEntity()
     e.components.emplace_back(std::move(src));
 
     auto puzzle = std::make_unique<eol::PuzzleComponent>();
-    puzzle->setRequiredLight(5);
+    puzzle->setRequiredLight(1);
+    puzzle->setSolved(false);
+    puzzle->setLightRequirement(eol::PuzzleComponent::LightRequirement::PlayerOnly);
     e.components.emplace_back(std::move(puzzle));
+
+    auto hitbox = std::make_unique<eol::HitboxComponent>();
+    hitbox->setSize(GameSettings::relativeSize(0.05f, 0.05f));
+    e.components.emplace_back(std::move(hitbox));
 
     auto light = std::make_unique<eol::LightComponent>();
     light->setRadius(GameSettings::relativeMin(0.324f));
-    light->setBaseIntensity(0.2f);
+    light->setBaseIntensity(0.15f);
     e.components.emplace_back(std::move(light));
+
+    auto emitter = std::make_unique<eol::LightEmitterComponent>();
+    emitter->setDirection(sf::Vector2f{0.f, -1.f});
+    emitter->setBeamLength(GameSettings::relativeY(0.95f));
+    emitter->setBeamWidth(GameSettings::relativeMin(0.012f));
+    emitter->setDamage(55.f);
+    emitter->setBeamDuration(0.18f);
+    emitter->setCooldown(0.1f);
+    emitter->setMaxReflections(6);
+    emitter->setBeamColor(sf::Color(255, 242, 205, 255));
+    emitter->setContinuousFire(true);
+    emitter->setTriggerHeld(false);
+    e.components.emplace_back(std::move(emitter));
 
     e.components.emplace_back(std::make_unique<eol::RenderComponent>());
     return e;
