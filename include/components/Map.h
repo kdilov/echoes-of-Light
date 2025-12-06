@@ -9,34 +9,34 @@ enum class TileType {
     LIGHT_SOURCE,
     MIRROR,
     START,
-    END
+    END,
+    SPAWNER
 };
 
 class Map {
 public:
-    Map() = default;                        // allows constructing without a filename
+    Map() = default;
     bool loadFromFile(const std::string& filename);
 
     TileType getTile(int x, int y) const;
     int getWidth() const { return width; }
     int getHeight() const { return height; }
 
-    // Textures for rendering
+    // Optional rendering support (you can ignore if not rendering)
     void setTextures(
         const sf::Texture& wallTex,
         const sf::Texture& lightTex,
         const sf::Texture& mirrorTex,
         const sf::Texture& startTex,
         const sf::Texture& endTex,
-        const sf::Texture& emptyTex
-    );
+        const sf::Texture& emptyTex);
+    void draw(sf::RenderWindow& window, float tileSize, sf::Vector2f offset = { 0.f, 0.f }) const;
 
-    void draw(sf::RenderWindow& window) const;
 
-    // Collision checks
+    // Collision helpers
     bool isWalkableTile(TileType t) const;
     bool isWalkableTileCoord(int tx, int ty) const;
-    bool isWalkableWorld(float worldx, float worldy) const;
+    bool isWalkableWorld(float worldx, float worldy, float tileSize = 32) const;
 
 private:
     TileType charToTile(char c) const;
@@ -45,7 +45,7 @@ private:
     int width = 0;
     int height = 0;
 
-    // Texture pointers
+    // optional textures (can be nullptr)
     const sf::Texture* wallTexture = nullptr;
     const sf::Texture* lightTexture = nullptr;
     const sf::Texture* mirrorTexture = nullptr;
