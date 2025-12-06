@@ -19,7 +19,10 @@
 #include "components/RenderComponent.h"
 #include "components/TransformComponent.h"
 #include "components/UpgradeComponent.h"
+#include "components/LevelManager.h"
+#include "components/SpawnerComponent.h"
 #include "GameSettings.h"
+
 
 // =============================================================
 //   Helper Image Generators (unchanged from your original)
@@ -105,6 +108,18 @@ bool Game::initialize()
     if (!loadResources())
         return false;
 
+    // Load starting level
+    levels_.setCurrentIndex(startLevelIndex_);
+    if (!levels_.loadCurrentLevel()) {
+        std::cerr << "ERROR: Failed to load starting level\n";
+        return false;
+    }
+    std::cout << "Loaded first level successfully.\n";
+
+    // Calculate tile size for this level
+    recalculateTileSize();
+
+    
     // Initialize dialog system
     if (!dialogSystem_.initialize(gameFont_)) {
         std::cerr << "ERROR: Failed to initialize dialog system\n";
@@ -119,6 +134,10 @@ bool Game::initialize()
         {"Hero", "I will not fail you, my lord."}
         });
 
+    // Setting up Enemy spawner system with enemy factory  
+    spawnerSystem_.setEnemyFactory([this](const sf::Vector2f& position) {
+        return createEnemyAtPosition(position);
+        });
 
     createEntities();
 
@@ -178,17 +197,12 @@ bool Game::loadResources()
 // =============================================================
 void Game::createEntities()
 {
-    player_ = createPlayerEntity();
-    lightBeacon_ = createLightBeaconEntity();
-    enemy_ = createEnemyEntity();
-
     entities_.clear();
-    entities_.push_back(&player_);
-    entities_.push_back(&lightBeacon_);
-    entities_.push_back(&enemy_);
-
     worldObjects_.clear();
-    worldObjects_.reserve(16);
+    worldObjects_.reserve(64);
+
+    const Map& map = levels_.getCurrentMap();
+    sf::Vector2f playerStartPos = GameSettings::center(); // Default fallback
 
     auto addWorld = [&](Entity&& e)
         {
@@ -198,57 +212,71 @@ void Game::createEntities()
             worldObjects_.push_back(std::move(ptr));
         };
 
-    // === Mirrors ===
-    addWorld(createMirrorEntity(
-        GameSettings::relativePos(0.65f, 0.47f),
-        { -1, 1 },
-        GameSettings::relativeSize(0.07f, 0.033f),
-        eol::MirrorComponent::MirrorType::Prism));
+    // Scan through the map and create entities for each tile
+    for (int y = 0; y < map.getHeight(); ++y) {
+        for (int x = 0; x < map.getWidth(); ++x) {
+            TileType tile = map.getTile(x, y);
+            sf::Vector2f worldPos = tileToWorld(x, y);
 
-    addWorld(createMirrorEntity(
-        GameSettings::relativePos(0.45f, 0.30f),
-        { 1, 1 },
-        GameSettings::relativeSize(0.052f, 0.03f),
-        eol::MirrorComponent::MirrorType::Splitter));
+            switch (tile) {
+            case TileType::WALL:
+                addWorld(createWallEntity(worldPos, sf::Vector2f(tileSize_, tileSize_)));
+                break;
 
-    addWorld(createMirrorEntity(
-        GameSettings::relativePos(0.50f, 0.50f),
-        { 1, 1 },
-        GameSettings::relativeSize(0.052f, 0.03f),
-        eol::MirrorComponent::MirrorType::Flat));
+            case TileType::START:
+                playerStartPos = worldPos;
+                break;
 
-    // === Light Nodes ===
-    addWorld(createLightSourceNode("PrismNode",
-        GameSettings::relativePos(0.325f, 0.60f), true));
+            case TileType::END:
+                // Could create an exit/goal entity here
+                // For now, handled by playerReachedExit()
+                break;
 
-    addWorld(createLightSourceNode("AccessLight",
-        GameSettings::relativePos(0.875f, 0.70f), false));
+            case TileType::LIGHT_SOURCE:
+                addWorld(createLightSourceNode("Light_" + std::to_string(x) + "_" + std::to_string(y),
+                    worldPos, true));
+                break;
 
-    // === Walls ===
+            case TileType::MIRROR:
+                addWorld(createMirrorEntity(
+                    worldPos,
+                    { 1, 1 },
+                    GameSettings::relativeSize(0.052f, 0.015f),
+                    eol::MirrorComponent::MirrorType::Flat));
+                break;
 
-    addWorld(createWallEntity(
-        GameSettings::relativePos(0.125f, 0.50f),
-        GameSettings::relativeSize(0.021f, 0.25f)));
+            case TileType::SPAWNER:
+                addWorld(createSpawnerEntity(
+                    worldPos,
+                    5.f,    // Spawn every 5 seconds
+                    2       // Max 2 enemies per spawner
+                ));
+                break;
 
-    addWorld(createWallEntity(
-        GameSettings::relativePos(0.75f, 0.75f),
-        GameSettings::relativeSize(0.0625f, 0.111f)));
+            case TileType::EMPTY:
+            default:
+                // Nothing to create
+                break;
+            }
+        }
+    }
 
-    addWorld(createWallEntity(
-        GameSettings::relativePos(0.25f, 0.867f),
-        GameSettings::relativeSize(0.125f, 0.037f)));
+    // Create player at the START position
+    player_ = createPlayerEntity();
+    if (auto* transform = player_.getComponent<eol::TransformComponent>()) {
+        transform->setPosition(playerStartPos);
+    }
+    entities_.push_back(&player_);
 
-    addWorld(createWallEntity(
-        GameSettings::relativePos(0.3625f, 0.783f),
-        GameSettings::relativeSize(0.021f, 0.133f)));
+    // Create light beacon (could place this as a tile from map )
+    lightBeacon_ = createLightBeaconEntity();
+    entities_.push_back(&lightBeacon_);
 
-    addWorld(createWallEntity(
-        GameSettings::relativePos(0.833f, 0.37f),
-        GameSettings::relativeSize(0.021f, 0.278f)));
+    // Create enemy (you could add an 'X' tile type for enemies)
+    enemy_ = createEnemyEntity();
+    entities_.push_back(&enemy_);
 
-    addWorld(createWallEntity(
-        GameSettings::relativePos(0.417f, 0.694f),
-        GameSettings::relativeSize(0.156f, 0.037f)));
+    std::cout << "Created " << entities_.size() << " entities from map.\n";
 }
 
 // =============================================================
@@ -484,7 +512,7 @@ Entity Game::createWallEntity(const sf::Vector2f& pos, const sf::Vector2f& size)
 
     e.components.emplace_back(std::make_unique<eol::TransformComponent>(
         pos,
-        sf::Vector2f(size.x * 0.5f, size.y * 0.5f),
+        sf::Vector2f(1.f, 1.f),  // Scale = 1, we set size directly
         0.f));
 
     auto coll = std::make_unique<eol::CollisionComponent>();
@@ -495,10 +523,53 @@ Entity Game::createWallEntity(const sf::Vector2f& pos, const sf::Vector2f& size)
     auto render = std::make_unique<eol::RenderComponent>();
     auto& sprite = render->getSprite();
     sprite.setTexture(debugWhiteTexture_);
-    sprite.setTextureRect({ {0,0}, {2,2} });
+    sprite.setTextureRect({ {0, 0}, {2, 2} });
     sprite.setOrigin({ 1.f, 1.f });
-    render->setTint(sf::Color(160, 160, 180, 220));
+    sprite.setScale(sf::Vector2f(size.x * 0.5f, size.y * 0.5f));
+    render->setTint(sf::Color(80, 80, 100, 220));  // Match map color
     e.components.emplace_back(std::move(render));
+
+    return e;
+}
+
+Entity Game::createSpawnerEntity(const sf::Vector2f& position, float interval, int maxEnemies)
+{
+    Entity e;
+    e.name = "Spawner";
+
+    // Position only - (invisible)
+    e.components.emplace_back(std::make_unique<eol::TransformComponent>(
+        position,
+        sf::Vector2f{ 1.f, 1.f },
+        0.f));
+
+    // Spawner settings
+    auto spawner = std::make_unique<eol::SpawnerComponent>();
+    spawner->setSpawnInterval(interval);
+    spawner->setMaxEnemies(maxEnemies);
+    e.components.emplace_back(std::move(spawner));
+
+    return e;
+}
+
+Entity Game::createEnemyAtPosition(const sf::Vector2f& position)
+{
+    // Create a standard enemy using existing function
+    Entity e = createEnemyEntity();
+
+    // Override the position
+    if (auto* transform = e.getComponent<eol::TransformComponent>()) {
+        transform->setPosition(position);
+    }
+
+    // Update patrol points to be around the spawn position
+    if (auto* ai = e.getComponent<eol::EnemyAIComponent>()) {
+        ai->setPatrolPoints({
+            position,
+            position + sf::Vector2f{-GameSettings::relativeX(0.1f), 0.f},
+            position + sf::Vector2f{GameSettings::relativeX(0.1f), 0.f}
+            });
+    }
 
     return e;
 }
@@ -517,6 +588,40 @@ void Game::update(float dt, sf::RenderWindow& window)
         animationSystem_.update(entities_, dt);
         enemyAISystem_.update(entities_, dt, player_);
         combatSystem_.updateMeleeAttacks(entities_, dt);
+
+        // Update spawners and add new enemies
+        std::vector<Entity> newEnemies = spawnerSystem_.update(entities_, dt);
+        for (auto& enemy : newEnemies) {
+            auto ptr = std::make_unique<Entity>(std::move(enemy));
+            entities_.push_back(ptr.get());
+            worldObjects_.push_back(std::move(ptr));
+        }
+
+
+        // Check if player reached the exit
+        if (playerReachedExit()) {
+            levels_.nextLevel();
+
+            if (levels_.isLevelComplete()) {
+                // All levels complete - show victory message
+                dialogSystem_.startDialog({
+                    {"Narrator", "Congratulations! You have restored the light to all eras!"},
+                    {"King", "The kingdom is saved. You are a true hero!"}
+                    });
+                // Could also transition to a credits scene here
+            }
+            else {
+                // Load next level
+                recalculateTileSize();
+                createEntities();
+
+                // Show level transition dialog
+                dialogSystem_.startDialog({
+                    {"Narrator", "You have found the path forward..."},
+                    {"Narrator", "A new challenge awaits."}
+                    });
+            }
+        }
     }
 
     // Light system updates regardless (for visual effects)
@@ -528,6 +633,13 @@ void Game::update(float dt, sf::RenderWindow& window)
 // =============================================================
 void Game::render(sf::RenderWindow& window)
 {
+   
+    // Draw the map first (background layer)
+    const Map& map = levels_.getCurrentMap();
+    if (map.getWidth() > 0 && map.getHeight() > 0) {
+        map.draw(window, tileSize_, mapOffset_);
+    }
+
     renderSystem_.render(window, entities_);
     lightSystem_.render(window, entities_);
 
@@ -563,3 +675,111 @@ std::string Game::findResourcePath(const std::string& relative) const
 
     return relative;
 }
+
+
+bool Game::playerReachedExit() {
+    // Get player's world position
+    auto* t = player_.getComponent<eol::TransformComponent>();
+    if (!t) return false;
+
+    sf::Vector2f ppos = t->getPosition();
+
+    // Get exit tile world position
+    LevelObjects objs = levels_.scanObjects();
+    if (objs.exitTile.x < 0) return false;
+
+    // Convert exit tile to world coordinates (center of tile)
+    sf::Vector2f exitWorld = tileToWorld(objs.exitTile.x, objs.exitTile.y);
+
+    // Check distance
+    float dx = ppos.x - exitWorld.x;
+    float dy = ppos.y - exitWorld.y;
+    float dist2 = dx * dx + dy * dy;
+
+    // Within half a tile
+    float threshold = tileSize_ * 0.5f;
+    return dist2 < (threshold * threshold);
+}
+
+sf::Vector2f Game::tileToWorld(int tileX, int tileY) const {
+    // Returns the center of the tile in world coordinates
+    return sf::Vector2f(
+        mapOffset_.x + (tileX + 0.5f) * tileSize_,
+        mapOffset_.y + (tileY + 0.5f) * tileSize_
+    );
+}
+
+void Game::recalculateTileSize()
+{
+    const Map& map = levels_.getCurrentMap();
+    if (map.getWidth() > 0 && map.getHeight() > 0) {
+        float tileSizeX = GameSettings::width() / static_cast<float>(map.getWidth());
+        float tileSizeY = GameSettings::height() / static_cast<float>(map.getHeight());
+        tileSize_ = std::min(tileSizeX, tileSizeY);
+
+        // Calculate offset to center the map
+        float mapPixelWidth = map.getWidth() * tileSize_;
+        float mapPixelHeight = map.getHeight() * tileSize_;
+        mapOffset_.x = (GameSettings::width() - mapPixelWidth) / 2.f;
+        mapOffset_.y = (GameSettings::height() - mapPixelHeight) / 2.f;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

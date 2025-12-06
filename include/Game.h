@@ -7,12 +7,15 @@
 #include "components/MirrorComponent.h"
 #include "GameSettings.h"
 #include "systems/DialogSystem.h"
-
+#include "components/LevelManager.h"
+#include "systems/SpawnerSystem.h"
 
 class Game
 {
 public:
     Game();
+    explicit Game(int startLevel);
+    int run();
 
     bool initialize();
     
@@ -29,6 +32,9 @@ private:
     bool loadResources();
     std::string findResourcePath(const std::string& relativePath) const;
 
+    LevelManager levels_;
+    int startLevelIndex_ = 0;
+    void recalculateTileSize();
     
     void createEntities();
 
@@ -45,9 +51,22 @@ private:
         bool movable);
     Entity createWallEntity(const sf::Vector2f& position,
         const sf::Vector2f& size);
+    Entity createSpawnerEntity(const sf::Vector2f& position,
+        float interval,
+        int maxEnemies);
+    Entity createEnemyAtPosition(const sf::Vector2f& position);
+
+
+    // Tile size for current level
+    float tileSize_ = 0.f;
+    sf::Vector2f mapOffset_ = { 0.f, 0.f };
+
+    // Helper to convert tile coords to world coords
+    sf::Vector2f tileToWorld(int tileX, int tileY) const;
 
 private:
     bool initialized_;
+    bool playerReachedExit();
 
     sf::Texture idleTexture_;
     sf::Texture moveTexture_;
@@ -63,6 +82,7 @@ private:
     
     std::vector<std::unique_ptr<Entity>> worldObjects_;
 
+
     
     InputSystem inputSystem_;
     AnimationSystem animationSystem_;
@@ -70,6 +90,8 @@ private:
     CombatSystem combatSystem_;
     EnemyAISystem enemyAISystem_;
     LightSystem lightSystem_;
+    SpawnerSystem spawnerSystem_;
+
 
     
     unsigned int currentFramerate;

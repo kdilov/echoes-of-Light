@@ -12,13 +12,24 @@
 #include <cmath>
 
 namespace {
-sf::Vector2f normalizeVector(const sf::Vector2f& value) {
-    const float length = std::sqrt(value.x * value.x + value.y * value.y);
-    if (length <= 0.0001f) {
-        return sf::Vector2f{1.f, 0.f};
+    sf::Vector2f normalizeVector(const sf::Vector2f& value) {
+        const float length = std::sqrt(value.x * value.x + value.y * value.y);
+        if (length <= 0.0001f) {
+            return sf::Vector2f{ 1.f, 0.f };
+        }
+        return sf::Vector2f{ value.x / length, value.y / length };
     }
-    return sf::Vector2f{value.x / length, value.y / length};
-}
+
+    // Rotate a vector by a given angle in degrees (clockwise)
+    sf::Vector2f rotateVector(const sf::Vector2f& v, float degrees) {
+        float radians = degrees * 3.14159265f / 180.f;
+        float cos = std::cos(radians);
+        float sin = std::sin(radians);
+        return sf::Vector2f{
+            v.x * cos + v.y * sin,
+            -v.x * sin + v.y * cos
+        };
+    }
 }
 
 void InputSystem::update(Entity& player, float deltaTime, const sf::RenderWindow& window) {
@@ -72,6 +83,7 @@ void InputSystem::updateWithCollision(Entity& player,
 
     handlePickupDrop(player, entities);
     playerComp->tickInvulnerability(deltaTime);
+    handleMirrorRotation(player);
 
     sf::Vector2f movement = getMovementInput();
     const bool isMoving = (movement.x != 0.f || movement.y != 0.f);
@@ -207,5 +219,41 @@ void InputSystem::handlePickupDrop(Entity& player, std::vector<Entity*>& entitie
         }
     }
     m_pickupKeyWasPressed = ePressed;
+}
+
+// Rotate the carried mirror by 45 degrees when R is pressed
+void InputSystem::handleMirrorRotation(Entity& player) {
+    bool rPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R);
+
+    // Only trigger on key press, not hold
+    if (rPressed && !m_rotateKeyWasPressed) {
+        auto* playerComp = player.getComponent<eol::PlayerComponent>();
+        if (!playerComp || !playerComp->isCarrying()) {
+            m_rotateKeyWasPressed = rPressed;
+            return;
+        }
+
+        Entity* carried = playerComp->getCarriedEntity();
+        if (!carried) {
+            m_rotateKeyWasPressed = rPressed;
+            return;
+        }
+
+        // Get mirror and transform components
+        auto* mirror = carried->getComponent<eol::MirrorComponent>();
+        auto* transform = carried->getComponent<eol::TransformComponent>();
+
+        if (mirror && transform) {
+            // Rotate the mirror's normal by 45 degrees (affects light reflection)
+            sf::Vector2f currentNormal = mirror->getNormal();
+            sf::Vector2f newNormal = rotateVector(currentNormal, 45.f);
+            mirror->setNormal(newNormal);
+
+            // Rotate the visual transform by 45 degrees (so sprite looks correct)
+            float currentRotation = transform->getRotation();
+            transform->setRotation(currentRotation + 45.f);
+        }
+    }
+    m_rotateKeyWasPressed = rPressed;
 }
 
