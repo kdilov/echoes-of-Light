@@ -104,8 +104,8 @@ void Map::draw(sf::RenderWindow& window, float tileSize, sf::Vector2f offset) co
                 fallbackColor = sf::Color(255, 255, 150);
                 break;
             case TileType::MIRROR:
-                tex = mirrorTexture;
-                fallbackColor = sf::Color(150, 200, 255);
+                tex = emptyTexture;
+                fallbackColor = sf::Color(30, 30, 40);
                 break;
             case TileType::START:
                 tex = startTexture;

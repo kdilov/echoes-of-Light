@@ -143,6 +143,7 @@ bool Game::initialize()
     else {
         // Non-tutorial levels - no interactive tutorial
         tutorialStep_ = TutorialStep::None;
+        beaconsPreviouslySolved_ = false;
     }
 
     // Setting up Enemy spawner system with enemy factory  
@@ -668,6 +669,8 @@ void Game::update(float dt, sf::RenderWindow& window)
                 {"Guide", "The beacons shine bright! The path forward is open."},
                 {"Guide", "Make your way to the EXIT."}
                 });
+            lightSystem_.update(entities_, dt, window);
+            return;
         }
 
         // Check if player reached the exit and required puzzle(s) are solved
@@ -688,7 +691,8 @@ void Game::update(float dt, sf::RenderWindow& window)
                 recalculateTileSize();
                 applyWallTextureForCurrentLevel();
                 createEntities();
-                beaconsPreviouslySolved_ = false;  // Reset for new level
+                beaconsPreviouslySolved_ = false; // Reset for new level
+                tutorialStep_ = TutorialStep::None;
 
                 // Show era-specific transition dialog
                 int newLevel = levels_.getCurrentIndex();
