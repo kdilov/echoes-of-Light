@@ -67,5 +67,10 @@ set_target_properties(echoes-of-light PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
-
-file(COPY "resources" DESTINATION "bin")
+add_custom_command(TARGET echoes-of-light POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E remove_directory
+            "$<TARGET_FILE_DIR:echoes-of-light>/resources"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/resources"
+            "$<TARGET_FILE_DIR:echoes-of-light>/resources"
+)
