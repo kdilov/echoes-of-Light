@@ -259,17 +259,24 @@ void InputSystem::handleMirrorRotation(Entity& player) {
             return;
         }
 
-        // Get mirror and transform components
-        auto* mirror = carried->getComponent<eol::MirrorComponent>();
-        auto* transform = carried->getComponent<eol::TransformComponent>();
+        auto* mirror      = carried->getComponent<eol::MirrorComponent>();
+        auto* lightSource = carried->getComponent<eol::LightSourceComponent>();
+        auto* emitter     = carried->getComponent<eol::LightEmitterComponent>();
+        auto* transform   = carried->getComponent<eol::TransformComponent>();
 
         if (mirror && transform) {
-            // Rotate the mirror's normal by 45 degrees (affects light reflection)
             sf::Vector2f currentNormal = mirror->getNormal();
             sf::Vector2f newNormal = rotateVector(currentNormal, 45.f);
             mirror->setNormal(newNormal);
 
-            // Rotate the visual transform by 45 degrees (so sprite looks correct)
+            float currentRotation = transform->getRotation();
+            transform->setRotation(currentRotation + 45.f);
+        }
+        else if (lightSource && emitter && transform) {
+            sf::Vector2f currentDir = emitter->getDirection();
+            sf::Vector2f newDir = rotateVector(currentDir, 45.f);
+            emitter->setDirection(newDir);
+
             float currentRotation = transform->getRotation();
             transform->setRotation(currentRotation + 45.f);
         }

@@ -265,9 +265,19 @@ void Game::createEntities()
                     worldPos, true));
                 break;
 
-            case TileType::BEACON:
+            case TileType::BEACON_1:
             {
-                auto beacon = createLightBeaconEntity(worldPos);
+                auto beacon = createLightBeaconEntity(worldPos, 1);
+                auto ptr = std::make_unique<Entity>();
+                *ptr = std::move(beacon);
+                beacons_.push_back(ptr.get());
+                entities_.push_back(ptr.get());
+                worldObjects_.push_back(std::move(ptr));
+                break;
+            }
+            case TileType::BEACON_2:
+            {
+                auto beacon = createLightBeaconEntity(worldPos, 2);
                 auto ptr = std::make_unique<Entity>();
                 *ptr = std::move(beacon);
                 beacons_.push_back(ptr.get());
@@ -375,7 +385,7 @@ Entity Game::createPlayerEntity()
     return e;
 }
 
-Entity Game::createLightBeaconEntity(const sf::Vector2f& worldPosition)
+Entity Game::createLightBeaconEntity(const sf::Vector2f& worldPosition, int beaconNumber)
 {
     Entity e;
     e.name = "LightBeacon";
@@ -395,7 +405,7 @@ Entity Game::createLightBeaconEntity(const sf::Vector2f& worldPosition)
     puzzle->setRequiredLight(1);
     puzzle->setSolved(false);
     puzzle->setLightRequirement(eol::PuzzleComponent::LightRequirement::Any);
-    puzzle->setRequiredUniqueSources(2);
+    puzzle->setRequiredUniqueSources(beaconNumber);
     e.components.emplace_back(std::move(puzzle));
 
     auto hitbox = std::make_unique<eol::HitboxComponent>();

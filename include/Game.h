@@ -41,7 +41,7 @@ private:
 
     
     Entity createPlayerEntity();
-    Entity createLightBeaconEntity(const sf::Vector2f& worldPosition);
+    Entity createLightBeaconEntity(const sf::Vector2f& worldPosition, int beaconNumber);
     Entity createEnemyEntity();
     Entity createMirrorEntity(const sf::Vector2f& position,
         const sf::Vector2f& normal,

@@ -8,7 +8,8 @@ enum class TileType {
     WALL,
     LIGHT_SOURCE,
     MIRROR,
-    BEACON,
+    BEACON_1,
+    BEACON_2,
     START,
     END,
     SPAWNER

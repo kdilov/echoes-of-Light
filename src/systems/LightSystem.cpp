@@ -737,35 +737,48 @@ void LightSystem::drawLightBeacons(sf::RenderTarget& target, std::vector<Entity*
             continue;
         }
 
+        sf::Vector2f dir(0.f, -1.f);
+        if (auto* emitter = entity->getComponent<eol::LightEmitterComponent>()) {
+            dir = normalizeVector(emitter->getDirection());
+            if (std::abs(dir.x) < kEpsilon && std::abs(dir.y) < kEpsilon) {
+                dir = sf::Vector2f(0.f, -1.f);
+            }
+        }
+
         const float baseWidth = std::max(footprint * 0.85f, 60.f);
         const float innerWidth = baseWidth * 0.45f;
-        const float beamHeight = std::max(GameSettings::refHeight * 0.55f, center.y);
-        const float topY = std::max(0.f, center.y - beamHeight);
-        const float bottomY = center.y + std::max(footprint * 0.25f, 10.f);
+        const float beamLength = std::max(
+            GameSettings::refHeight * 0.55f,
+            std::sqrt(center.x * center.x + center.y * center.y));
+        const float bottomLength = std::max(footprint * 0.25f, 10.f);
+        const sf::Vector2f topCenter = center + dir * beamLength;
+        const sf::Vector2f bottomCenter = center - dir * bottomLength;
+
+        const sf::Vector2f normal = normalizeVector(perpendicular(dir));
 
         sf::VertexArray outer(sf::PrimitiveType::TriangleStrip, 4);
         sf::Color outerTop(120, 190, 255, 0);
         sf::Color outerBottom(255, 240, 200, 110);
-        outer[0].position = sf::Vector2f(center.x - baseWidth, topY);
+        outer[0].position = topCenter - normal * baseWidth;
         outer[0].color = outerTop;
-        outer[1].position = sf::Vector2f(center.x - baseWidth * 0.4f, bottomY);
+        outer[1].position = bottomCenter - normal * (baseWidth * 0.4f);
         outer[1].color = outerBottom;
-        outer[2].position = sf::Vector2f(center.x + baseWidth, topY);
+        outer[2].position = topCenter + normal * baseWidth;
         outer[2].color = outerTop;
-        outer[3].position = sf::Vector2f(center.x + baseWidth * 0.4f, bottomY);
+        outer[3].position = bottomCenter + normal * (baseWidth * 0.4f);
         outer[3].color = outerBottom;
         target.draw(outer, addState);
 
         sf::VertexArray inner(sf::PrimitiveType::TriangleStrip, 4);
         sf::Color innerTop(255, 255, 230, 35);
         sf::Color innerBottom(255, 255, 215, 210);
-        inner[0].position = sf::Vector2f(center.x - innerWidth, topY);
+        inner[0].position = topCenter - normal * innerWidth;
         inner[0].color = innerTop;
-        inner[1].position = sf::Vector2f(center.x - innerWidth * 0.35f, bottomY);
+        inner[1].position = bottomCenter - normal * (innerWidth * 0.35f);
         inner[1].color = innerBottom;
-        inner[2].position = sf::Vector2f(center.x + innerWidth, topY);
+        inner[2].position = topCenter + normal * innerWidth;
         inner[2].color = innerTop;
-        inner[3].position = sf::Vector2f(center.x + innerWidth * 0.35f, bottomY);
+        inner[3].position = bottomCenter + normal * (innerWidth * 0.35f);
         inner[3].color = innerBottom;
         target.draw(inner, addState);
     }

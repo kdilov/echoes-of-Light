@@ -7,7 +7,8 @@ TileType Map::charToTile(char c) const {
         case '#': return TileType::WALL;
         case 'L': return TileType::LIGHT_SOURCE;
         case '/': return TileType::MIRROR;
-        case 'B': return TileType::BEACON;
+        case '1': return TileType::BEACON_1;
+        case '2': return TileType::BEACON_2;
         case 'S': return TileType::START;
         case 'E': return TileType::END;
         case 'X': return TileType::SPAWNER;
