@@ -23,6 +23,7 @@ public:
 
     bool isLevelComplete() const;
     const Map& getCurrentMap() const;
+    Map& getCurrentMapMutable() { return map; }
 
     LevelObjects scanObjects() const;
     const std::vector<std::string>& getLevelFiles() const { return levelFiles; }

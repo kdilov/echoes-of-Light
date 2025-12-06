@@ -34,9 +34,11 @@ private:
 
     LevelManager levels_;
     int startLevelIndex_ = 0;
+    bool gameComplete_ = false;
     void recalculateTileSize();
-    
+    void applyWallTextureForCurrentLevel();
     void createEntities();
+
 
     
     Entity createPlayerEntity();
@@ -61,6 +63,7 @@ private:
     float tileSize_ = 0.f;
     sf::Vector2f mapOffset_ = { 0.f, 0.f };
 
+
     // Helper to convert tile coords to world coords
     sf::Vector2f tileToWorld(int tileX, int tileY) const;
 
@@ -72,6 +75,9 @@ private:
     sf::Texture moveTexture_;
     sf::Texture debugWhiteTexture_;
     sf::Texture lightNodeTexture_;
+    sf::Texture wallTexturePast_;
+    sf::Texture wallTexturePresent_;
+    sf::Texture wallTextureFuture_;
 
    
     Entity player_;

@@ -17,7 +17,6 @@ class Map {
 public:
     Map() = default;
     bool loadFromFile(const std::string& filename);
-
     TileType getTile(int x, int y) const;
     int getWidth() const { return width; }
     int getHeight() const { return height; }
@@ -32,6 +31,7 @@ public:
         const sf::Texture& emptyTex);
     void draw(sf::RenderWindow& window, float tileSize, sf::Vector2f offset = { 0.f, 0.f }) const;
 
+    void setWallTexture(const sf::Texture& tex) { wallTexture = &tex; }
 
     // Collision helpers
     bool isWalkableTile(TileType t) const;
@@ -41,6 +41,7 @@ public:
 private:
     TileType charToTile(char c) const;
 
+    
     std::vector<std::vector<TileType>> grid;
     int width = 0;
     int height = 0;
