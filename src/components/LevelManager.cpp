@@ -4,15 +4,12 @@
 LevelManager::LevelManager()
     : currentLevelIndex(0)
 {
-    // 6-level default list (you can replace these names)
+    // 3-level default list (you can replace these names)
     levelFiles = {
         "resources/levels/tutorial.txt",
-        "resources/levels/past_1.txt",
-        "resources/levels/past_2.txt",
-        "resources/levels/present_1.txt",
-        "resources/levels/present_2.txt",
-        "resources/levels/future_1.txt",
-        "resources/levels/future_2.txt"
+        "resources/levels/past.txt",
+        "resources/levels/present.txt",
+        "resources/levels/future.txt",
     };
 
     // load first by default

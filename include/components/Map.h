@@ -11,6 +11,7 @@ enum class TileType {
     BEACON_1,
     BEACON_2,
     BEACON_3,
+    BEACON_4,
     START,
     END,
     SPAWNER

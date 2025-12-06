@@ -307,6 +307,17 @@ void Game::createEntities()
                 worldObjects_.push_back(std::move(ptr));
                 break;
             }
+            case TileType::BEACON_4:  
+            {
+                auto beacon = createLightBeaconEntity(worldPos, 4);
+                auto ptr = std::make_unique<Entity>();
+                *ptr = std::move(beacon);
+                beacons_.push_back(ptr.get());
+                entities_.push_back(ptr.get());
+                worldObjects_.push_back(std::move(ptr));
+                break;
+            }
+
 
             case TileType::MIRROR:
                 addWorld(createMirrorEntity(
@@ -320,7 +331,7 @@ void Game::createEntities()
                 addWorld(createSpawnerEntity(
                     worldPos,
                     5.f,    // Spawn every 5 seconds
-                    2       // Max 2 enemies per spawner
+                    5       // Max 5 enemies per spawner
                 ));
                 break;
 
@@ -726,6 +737,13 @@ void Game::update(float dt, sf::RenderWindow& window)
                         {"Guide", "The NEXT BEACON requires light from " + std::to_string(nextRequirement) + " different sources!"}
                         });
                 }
+                else if (nextRequirement == 4) {
+                    dialogSystem_.startDialog({
+                        {"Guide", "Brilliant! The beacon awakens."},
+                        {"Guide", "The FINAL BEACON requires light from FOUR different sources!"},
+                        {"Guide", "Combine your light with ALL activated beacon beams!"}
+                        });
+                }
                 else {
                     dialogSystem_.startDialog({
                         {"Guide", "The beacon shines! Find and activate the next one."}
@@ -782,7 +800,7 @@ void Game::update(float dt, sf::RenderWindow& window)
                         {"Guide", "Beware - shadows now roam these halls."}
                         });
                 }
-                else if (newLevel == 3) {
+                else if (newLevel == 2) {
                     // Entering Present era
                     dialogSystem_.startDialog({
                         {"Narrator", "The echoes of the past fade behind you..."},
@@ -791,15 +809,16 @@ void Game::update(float dt, sf::RenderWindow& window)
                         {"Guide", "The puzzles grow more complex. Stay vigilant."}
                         });
                 }
-                else if (newLevel == 5) {
+                else if (newLevel == 3) {
                     // Entering Future era
                     dialogSystem_.startDialog({
                         {"Narrator", "Time bends around you as you leap forward..."},
                         {"Narrator", "The FUTURE stretches before you, cold and uncertain."},
                         {"Narrator", "This is where the darkness originated."},
-                        {"Guide", "Your final trials await. The fate of all eras rests on you."}
+                        {"Guide", "Your final trial awaits. The fate of all eras rests on you."}
                         });
                 }
+
                 else {
                     // Generic transition within same era
                     dialogSystem_.startDialog({
@@ -937,11 +956,11 @@ void Game::recalculateTileSize()
 void Game::applyWallTextureForCurrentLevel() {
     int levelIndex = levels_.getCurrentIndex();
 
-    // Levels 0-3: Past, 4-7: Present, 8-11: Future
-    if (levelIndex < 3) {
+    // Level 0: Tutorial, Level 1: Past, Level 2: Present, Level 3: Future
+    if (levelIndex <= 1) {
         levels_.getCurrentMapMutable().setWallTexture(wallTexturePast_);
     }
-    else if (levelIndex < 5) {
+    else if (levelIndex == 2) {
         levels_.getCurrentMapMutable().setWallTexture(wallTexturePresent_);
     }
     else {

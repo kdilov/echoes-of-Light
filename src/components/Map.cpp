@@ -10,6 +10,7 @@ TileType Map::charToTile(char c) const {
         case '1': return TileType::BEACON_1;
         case '2': return TileType::BEACON_2;
         case '3': return TileType::BEACON_3;
+        case '4': return TileType::BEACON_4;
         case 'S': return TileType::START;
         case 'E': return TileType::END;
         case 'X': return TileType::SPAWNER;
