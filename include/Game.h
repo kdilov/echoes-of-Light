@@ -72,6 +72,7 @@ private:
     bool isBeaconPuzzleSolved();
     bool allBeaconsJustSolved();
     bool beaconsPreviouslySolved_ = false;
+    int lastBeaconHintShown_ = 0;
 
     // Interactive tutorial system
     enum class TutorialStep {

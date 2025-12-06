@@ -10,6 +10,7 @@ enum class TileType {
     MIRROR,
     BEACON_1,
     BEACON_2,
+    BEACON_3,
     START,
     END,
     SPAWNER

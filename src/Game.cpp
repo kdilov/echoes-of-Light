@@ -297,6 +297,16 @@ void Game::createEntities()
                 worldObjects_.push_back(std::move(ptr));
                 break;
             }
+            case TileType::BEACON_3:  
+            {
+                auto beacon = createLightBeaconEntity(worldPos, 3);
+                auto ptr = std::make_unique<Entity>();
+                *ptr = std::move(beacon);
+                beacons_.push_back(ptr.get());
+                entities_.push_back(ptr.get());
+                worldObjects_.push_back(std::move(ptr));
+                break;
+            }
 
             case TileType::MIRROR:
                 addWorld(createMirrorEntity(
@@ -662,6 +672,71 @@ void Game::update(float dt, sf::RenderWindow& window)
         }
 
 
+        // Check if a beacon was just solved and show hint for next one
+         // Skip during tutorial - tutorial system handles it
+        if (tutorialStep_ == TutorialStep::None && !isBeaconPuzzleSolved()) {
+            // Count how many beacons are solved and find the highest solved requirement
+            int highestSolvedRequirement = 0;
+            for (Entity* beacon : beacons_) {
+                if (!beacon) continue;
+                auto* puzzle = beacon->getComponent<eol::PuzzleComponent>();
+                if (puzzle && puzzle->isSolved()) {
+                    int req = static_cast<int>(puzzle->getRequiredUniqueSources());
+                    if (req > highestSolvedRequirement) {
+                        highestSolvedRequirement = req;
+                    }
+                }
+            }
+
+            // Show hint if we solved a new beacon
+            if (highestSolvedRequirement > lastBeaconHintShown_) {
+                lastBeaconHintShown_ = highestSolvedRequirement;
+
+                // Find what the next beacon requires
+                int nextRequirement = 0;
+                for (Entity* beacon : beacons_) {
+                    if (!beacon) continue;
+                    auto* puzzle = beacon->getComponent<eol::PuzzleComponent>();
+                    if (puzzle && !puzzle->isSolved()) {
+                        int req = static_cast<int>(puzzle->getRequiredUniqueSources());
+                        if (nextRequirement == 0 || req < nextRequirement) {
+                            nextRequirement = req;
+                        }
+                    }
+                }
+
+                // Show appropriate hint based on next beacon's requirement
+                if (nextRequirement == 2) {
+                    dialogSystem_.startDialog({
+                        {"Guide", "The beacon shines! Well done."},
+                        {"Guide", "The NEXT BEACON requires light from TWO different sources."},
+                        {"Guide", "Use your light AND a beacon's beam together!"}
+                        });
+                }
+                else if (nextRequirement == 3) {
+                    dialogSystem_.startDialog({
+                        {"Guide", "Excellent! Another beacon activated."},
+                        {"Guide", "The NEXT BEACON requires light from THREE different sources!"},
+                        {"Guide", "Combine your light with multiple beacon beams!"}
+                        });
+                }
+                else if (nextRequirement > 3) {
+                    dialogSystem_.startDialog({
+                        {"Guide", "Well done! Keep going."},
+                        {"Guide", "The NEXT BEACON requires light from " + std::to_string(nextRequirement) + " different sources!"}
+                        });
+                }
+                else {
+                    dialogSystem_.startDialog({
+                        {"Guide", "The beacon shines! Find and activate the next one."}
+                        });
+                }
+
+                lightSystem_.update(entities_, dt, window);
+                return;
+            }
+        }
+
         // Check if all beacons just got solved (show message once)
         // Skip this message during tutorial - the tutorial system handles it
         if (tutorialStep_ == TutorialStep::None && allBeaconsJustSolved()) {
@@ -693,6 +768,7 @@ void Game::update(float dt, sf::RenderWindow& window)
                 createEntities();
                 beaconsPreviouslySolved_ = false; // Reset for new level
                 tutorialStep_ = TutorialStep::None;
+                lastBeaconHintShown_ = 0;  // Reset hints for new level
 
                 // Show era-specific transition dialog
                 int newLevel = levels_.getCurrentIndex();
