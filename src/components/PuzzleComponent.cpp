@@ -33,5 +33,13 @@ void PuzzleComponent::setSolved(bool solved) noexcept {
     m_solved = solved;
 }
 
+void PuzzleComponent::setLightRequirement(LightRequirement requirement) noexcept {
+    m_requirement = requirement;
+}
+
+PuzzleComponent::LightRequirement PuzzleComponent::getLightRequirement() const noexcept {
+    return m_requirement;
+}
+
 } // namespace eol
 
