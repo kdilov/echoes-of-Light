@@ -5,7 +5,6 @@
 #include <memory>
 #include "Systems.h"
 #include "components/MirrorComponent.h"
-#include "GameSettings.h"
 #include "systems/DialogSystem.h"
 #include "components/LevelManager.h"
 #include "systems/SpawnerSystem.h"
@@ -42,7 +41,7 @@ private:
 
     
     Entity createPlayerEntity();
-    Entity createLightBeaconEntity();
+    Entity createLightBeaconEntity(const sf::Vector2f& worldPosition);
     Entity createEnemyEntity();
     Entity createMirrorEntity(const sf::Vector2f& position,
         const sf::Vector2f& normal,
@@ -70,6 +69,7 @@ private:
 private:
     bool initialized_;
     bool playerReachedExit();
+    bool isBeaconPuzzleSolved();
 
     sf::Texture idleTexture_;
     sf::Texture moveTexture_;
@@ -81,7 +81,7 @@ private:
 
    
     Entity player_;
-    Entity lightBeacon_;
+    std::vector<Entity*> beacons_;
     Entity enemy_;
     std::vector<Entity*> entities_;
 

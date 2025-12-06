@@ -16,3 +16,4 @@ const sf::Vector2f& HitboxComponent::getSize() const noexcept {
 } // namespace eol
 
 
+

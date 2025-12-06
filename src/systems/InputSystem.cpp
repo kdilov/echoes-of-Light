@@ -7,6 +7,7 @@
 #include "components/TransformComponent.h"
 #include "components/CollisionComponent.h"
 #include "components/MirrorComponent.h"
+#include "components/LightSourceComponent.h"
 #include "GameSettings.h"
 
 #include <cmath>
@@ -199,22 +200,41 @@ void InputSystem::handlePickupDrop(Entity& player, std::vector<Entity*>& entitie
             playerComp->setCarriedEntity(nullptr);
         }
         else {
-            // Try to pick up nearby mirror
+            // Try to pick up nearby mirror or movable light source
             sf::Vector2f playerPos = playerTransform->getPosition();
             const float pickupRange = GameSettings::relativeMin(0.083f);
 
+            Entity* bestCandidate = nullptr;
+            float bestDistance = pickupRange;
+
             for (Entity* entity : entities) {
                 if (!entity) continue;
-                auto* mirror = entity->getComponent<eol::MirrorComponent>();
                 auto* transform = entity->getComponent<eol::TransformComponent>();
-                if (!mirror || !transform || !mirror->isPickable()) continue;
+                if (!transform) continue;
 
                 sf::Vector2f diff = transform->getPosition() - playerPos;
                 float dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
-                if (dist < pickupRange) {
-                    playerComp->setCarriedEntity(entity);
-                    break;
+                if (dist >= bestDistance) {
+                    continue;
                 }
+
+                if (auto* mirror = entity->getComponent<eol::MirrorComponent>();
+                    mirror && mirror->isPickable()) {
+                    bestCandidate = entity;
+                    bestDistance = dist;
+                    continue;
+                }
+
+                if (auto* source = entity->getComponent<eol::LightSourceComponent>();
+                    source && source->isMovable()) {
+                    bestCandidate = entity;
+                    bestDistance = dist;
+                    continue;
+                }
+            }
+
+            if (bestCandidate) {
+                playerComp->setCarriedEntity(bestCandidate);
             }
         }
     }

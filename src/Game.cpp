@@ -88,7 +88,6 @@ Game::Game()
     , debugWhiteTexture_{}
     , lightNodeTexture_{}
     , player_{}
-    , lightBeacon_{}
     , enemy_{}
     , entities_{}
     , worldObjects_{}
@@ -187,19 +186,25 @@ bool Game::loadResources()
     std::string wallPastPath = findResourcePath("resources/sprites/PastWall.png");
     if (!wallTexturePast_.loadFromFile(wallPastPath)) {
         std::cerr << "WARNING: Failed to load past wall texture\n";
-        wallTexturePast_.loadFromImage(createSolidImage(16, sf::Color(80, 80, 100)));
+        if (!wallTexturePast_.loadFromImage(createSolidImage(16, sf::Color(80, 80, 100)))) {
+            std::cerr << "ERROR: Failed to create fallback past wall texture\n";
+        }
     }
 
     std::string wallPresentPath = findResourcePath("resources/sprites/PresentWall.png");
     if (!wallTexturePresent_.loadFromFile(wallPresentPath)) {
         std::cerr << "WARNING: Failed to load present wall texture\n";
-        wallTexturePresent_.loadFromImage(createSolidImage(16, sf::Color(100, 80, 80)));
+        if (!wallTexturePresent_.loadFromImage(createSolidImage(16, sf::Color(100, 80, 80)))) {
+            std::cerr << "ERROR: Failed to create fallback present wall texture\n";
+        }
     }
 
     std::string wallFuturePath = findResourcePath("resources/sprites/FutureWall.png");
     if (!wallTextureFuture_.loadFromFile(wallFuturePath)) {
         std::cerr << "WARNING: Failed to load future wall texture\n";
-        wallTextureFuture_.loadFromImage(createSolidImage(16, sf::Color(80, 100, 100)));
+        if (!wallTextureFuture_.loadFromImage(createSolidImage(16, sf::Color(80, 100, 100)))) {
+            std::cerr << "ERROR: Failed to create fallback future wall texture\n";
+        }
     }
 
     // Load font for dialog system
@@ -222,6 +227,7 @@ void Game::createEntities()
     entities_.clear();
     worldObjects_.clear();
     worldObjects_.reserve(64);
+    beacons_.clear();
 
     const Map& map = levels_.getCurrentMap();
     sf::Vector2f playerStartPos = GameSettings::center(); // Default fallback
@@ -259,6 +265,17 @@ void Game::createEntities()
                     worldPos, true));
                 break;
 
+            case TileType::BEACON:
+            {
+                auto beacon = createLightBeaconEntity(worldPos);
+                auto ptr = std::make_unique<Entity>();
+                *ptr = std::move(beacon);
+                beacons_.push_back(ptr.get());
+                entities_.push_back(ptr.get());
+                worldObjects_.push_back(std::move(ptr));
+                break;
+            }
+
             case TileType::MIRROR:
                 addWorld(createMirrorEntity(
                     worldPos,
@@ -291,9 +308,6 @@ void Game::createEntities()
     entities_.push_back(&player_);
 
     // Create light beacon (could place this as a tile from map )
-    lightBeacon_ = createLightBeaconEntity();
-    entities_.push_back(&lightBeacon_);
-
     // Create enemy (you could add an 'X' tile type for enemies)
     enemy_ = createEnemyEntity();
     entities_.push_back(&enemy_);
@@ -361,18 +375,18 @@ Entity Game::createPlayerEntity()
     return e;
 }
 
-Entity Game::createLightBeaconEntity()
+Entity Game::createLightBeaconEntity(const sf::Vector2f& worldPosition)
 {
     Entity e;
     e.name = "LightBeacon";
 
     e.components.emplace_back(std::make_unique<eol::TransformComponent>(
-        GameSettings::relativePos(0.80f, 0.233f),
+        worldPosition,
         sf::Vector2f{ 0.65f, 0.65f },
         0.f));
 
     auto src = std::make_unique<eol::LightSourceComponent>();
-    src->setMovable(false);
+    src->setMovable(true);
     src->setActive(false);
     src->setFuel(0.f);
     e.components.emplace_back(std::move(src));
@@ -380,7 +394,8 @@ Entity Game::createLightBeaconEntity()
     auto puzzle = std::make_unique<eol::PuzzleComponent>();
     puzzle->setRequiredLight(1);
     puzzle->setSolved(false);
-    puzzle->setLightRequirement(eol::PuzzleComponent::LightRequirement::PlayerOnly);
+    puzzle->setLightRequirement(eol::PuzzleComponent::LightRequirement::Any);
+    puzzle->setRequiredUniqueSources(2);
     e.components.emplace_back(std::move(puzzle));
 
     auto hitbox = std::make_unique<eol::HitboxComponent>();
@@ -620,8 +635,8 @@ void Game::update(float dt, sf::RenderWindow& window)
         }
 
 
-        // Check if player reached the exit
-        if (!gameComplete_ && playerReachedExit()) {
+        // Check if player reached the exit and required puzzle(s) are solved
+        if (!gameComplete_ && isBeaconPuzzleSolved() && playerReachedExit()) {
             levels_.nextLevel();
 
             if (levels_.isLevelComplete()) {
@@ -727,6 +742,23 @@ bool Game::playerReachedExit() {
     // Within half a tile
     float threshold = tileSize_ * 0.5f;
     return dist2 < (threshold * threshold);
+}
+
+bool Game::isBeaconPuzzleSolved() {
+    if (beacons_.empty()) {
+        return true;
+    }
+
+    for (Entity* beacon : beacons_) {
+        if (!beacon) continue;
+        if (auto* puzzle = beacon->getComponent<eol::PuzzleComponent>()) {
+            if (!puzzle->isSolved()) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 sf::Vector2f Game::tileToWorld(int tileX, int tileY) const {

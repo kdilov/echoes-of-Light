@@ -542,11 +542,13 @@ void LightSystem::applyPuzzleLight(Entity& source, Entity& entity, float intensi
         break;
     }
 
+    puzzle->registerSourceContribution(&source);
     puzzle->addReceivedLight(intensity * 0.1f);
     std::cout << "[LightSystem] Puzzle " << entity.name << " received " << intensity * 0.1f << " light." << std::endl;
     std::cout << "[LightSystem] Puzzle " << entity.name << " accumulated " << puzzle->getAccumulatedLight() << " light." << std::endl;
     std::cout << "[LightSystem] Puzzle " << entity.name << " required " << puzzle->getRequiredLight() << " light." << std::endl;
-    if (puzzle->getAccumulatedLight() >= static_cast<float>(puzzle->getRequiredLight())) {
+    if (puzzle->hasRequiredUniqueSources() &&
+        puzzle->getAccumulatedLight() >= static_cast<float>(puzzle->getRequiredLight())) {
         puzzle->setSolved(true);
         std::cout << "[LightSystem] Beacon " << entity.name << " reactivated." << std::endl;
     }
