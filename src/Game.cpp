@@ -131,7 +131,19 @@ bool Game::initialize()
         {"Narrator", "The kingdom has fallen into darkness..."},
         {"Narrator", "Only one hero remains who can restore the light."},
         {"King", "You must travel through the echoes of time to save us."},
-        {"Hero", "I will not fail you, my lord."}
+        {"Hero", "I will not fail you, my lord."},
+        {"Guide", "Before you begin your journey, let me teach you the ways of light."},
+        {"Guide", "Use WASD to move. Your character follows your command."},
+        {"Guide", "Point with your MOUSE and click or press SPACE to emit a beam of light."},
+        {"Guide", "See that glowing beacon ahead? It awaits your light to awaken."},
+        {"Guide", "Aim your light at the FIRST BEACON and hold to charge it."},
+        {"Guide", "Once awakened, beacons emit their own light upward."},
+        {"Guide", "The SECOND BEACON requires light from TWO sources to ignite..."},
+        {"Guide", "You will need to redirect the first beacon's light using a MIRROR."},
+        {"Guide", "Press E near a mirror to pick it up. Press R to rotate it."},
+        {"Guide", "Position the mirror so the first beacon's light reaches the second."},
+        {"Guide", "When all beacons shine, the EXIT will open. Find the red tile."},
+        {"Guide", "Now go, Hero. Show me you understand the ways of light."}
         });
 
     // Setting up Enemy spawner system with enemy factory  
@@ -645,8 +657,17 @@ void Game::update(float dt, sf::RenderWindow& window)
         }
 
 
+        // Check if all beacons just got solved (show message once)
+        if (allBeaconsJustSolved()) {
+            dialogSystem_.startDialog({
+                {"Guide", "The beacons shine bright! The path forward is open."},
+                {"Guide", "Make your way to the EXIT."}
+                });
+        }
+
         // Check if player reached the exit and required puzzle(s) are solved
         if (!gameComplete_ && isBeaconPuzzleSolved() && playerReachedExit()) {
+            int previousLevel = levels_.getCurrentIndex();
             levels_.nextLevel();
 
             if (levels_.isLevelComplete()) {
@@ -656,25 +677,58 @@ void Game::update(float dt, sf::RenderWindow& window)
                     {"Narrator", "Congratulations! You have restored the light to all eras!"},
                     {"King", "The kingdom is saved. You are a true hero!"}
                     });
-                // Could also transition to a credits scene here
             }
             else {
                 // Load next level
                 recalculateTileSize();
                 applyWallTextureForCurrentLevel();
                 createEntities();
+                beaconsPreviouslySolved_ = false;  // Reset for new level
 
-                // Show level transition dialog
-                dialogSystem_.startDialog({
-                    {"Narrator", "You have found the path forward..."},
-                    {"Narrator", "A new challenge awaits."}
-                    });
+                // Show era-specific transition dialog
+                int newLevel = levels_.getCurrentIndex();
+
+                if (previousLevel == 0) {
+                    // Completed tutorial, entering Past era
+                    dialogSystem_.startDialog({
+                        {"Guide", "Well done! You have mastered the basics."},
+                        {"Narrator", "Your journey through time begins now..."},
+                        {"Narrator", "The PAST awaits. Ancient ruins hold forgotten secrets."},
+                        {"Guide", "Beware - shadows now roam these halls."}
+                        });
+                }
+                else if (newLevel == 3) {
+                    // Entering Present era
+                    dialogSystem_.startDialog({
+                        {"Narrator", "The echoes of the past fade behind you..."},
+                        {"Narrator", "You step into the PRESENT. The world you once knew."},
+                        {"Narrator", "But darkness has taken hold here too."},
+                        {"Guide", "The puzzles grow more complex. Stay vigilant."}
+                        });
+                }
+                else if (newLevel == 5) {
+                    // Entering Future era
+                    dialogSystem_.startDialog({
+                        {"Narrator", "Time bends around you as you leap forward..."},
+                        {"Narrator", "The FUTURE stretches before you, cold and uncertain."},
+                        {"Narrator", "This is where the darkness originated."},
+                        {"Guide", "Your final trials await. The fate of all eras rests on you."}
+                        });
+                }
+                else {
+                    // Generic transition within same era
+                    dialogSystem_.startDialog({
+                        {"Narrator", "You have found the path forward..."},
+                        {"Narrator", "A new challenge awaits."}
+                        });
+                }
             }
         }
     }
-    // Light system updates regardless (for visual effects)
-    lightSystem_.update(entities_, dt, window);
-}
+        // Light system updates regardless (for visual effects)
+        lightSystem_.update(entities_, dt, window);
+    }
+
 
 // =============================================================
 //   RENDER (Scene system calls this)
@@ -799,10 +853,10 @@ void Game::applyWallTextureForCurrentLevel() {
     int levelIndex = levels_.getCurrentIndex();
 
     // Levels 0-3: Past, 4-7: Present, 8-11: Future
-    if (levelIndex < 2) {
+    if (levelIndex < 3) {
         levels_.getCurrentMapMutable().setWallTexture(wallTexturePast_);
     }
-    else if (levelIndex < 4) {
+    else if (levelIndex < 5) {
         levels_.getCurrentMapMutable().setWallTexture(wallTexturePresent_);
     }
     else {
@@ -812,7 +866,28 @@ void Game::applyWallTextureForCurrentLevel() {
 
 
 
+bool Game::allBeaconsJustSolved() {
+    // If no beacons, nothing to check
+    if (beacons_.empty()) {
+        return false;
+    }
 
+    // If we already showed the message, don't show again
+    if (beaconsPreviouslySolved_) {
+        return false;
+    }
+
+    // Check if all beacons are now solved
+    bool allSolved = isBeaconPuzzleSolved();
+
+    // If all solved and we haven't shown message yet
+    if (allSolved) {
+        beaconsPreviouslySolved_ = true;
+        return true;
+    }
+
+    return false;
+}
 
 
 

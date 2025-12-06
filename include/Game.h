@@ -70,6 +70,8 @@ private:
     bool initialized_;
     bool playerReachedExit();
     bool isBeaconPuzzleSolved();
+    bool allBeaconsJustSolved();
+    bool beaconsPreviouslySolved_ = false;
 
     sf::Texture idleTexture_;
     sf::Texture moveTexture_;
