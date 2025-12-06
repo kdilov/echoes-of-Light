@@ -86,34 +86,56 @@ void Map::draw(sf::RenderWindow& window, float tileSize, sf::Vector2f offset) co
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             TileType tile = getTile(x, y);
+            sf::Vector2f tilePos(offset.x + x * tileSize, offset.y + y * tileSize);
 
-            sf::RectangleShape rect;
-            rect.setSize(sf::Vector2f(tileSize, tileSize));
-            rect.setPosition(sf::Vector2f(offset.x + x * tileSize, offset.y + y * tileSize));
+            // Check if we have a texture for this tile type
+            const sf::Texture* tex = nullptr;
+            sf::Color fallbackColor;
 
             switch (tile) {
             case TileType::WALL:
-                rect.setFillColor(sf::Color(80, 80, 100));
+                tex = wallTexture;
+                fallbackColor = sf::Color(80, 80, 100);
                 break;
             case TileType::LIGHT_SOURCE:
-                rect.setFillColor(sf::Color(255, 255, 150));
+                tex = lightTexture;
+                fallbackColor = sf::Color(255, 255, 150);
                 break;
             case TileType::MIRROR:
-                rect.setFillColor(sf::Color(150, 200, 255));
+                tex = mirrorTexture;
+                fallbackColor = sf::Color(150, 200, 255);
                 break;
             case TileType::START:
-                rect.setFillColor(sf::Color(100, 255, 100));
+                tex = startTexture;
+                fallbackColor = sf::Color(100, 255, 100);
                 break;
             case TileType::END:
-                rect.setFillColor(sf::Color(255, 100, 100));
+                tex = exitTexture;
+                fallbackColor = sf::Color(255, 100, 100);
                 break;
             case TileType::EMPTY:
             default:
-                rect.setFillColor(sf::Color(30, 30, 40));
+                tex = emptyTexture;
+                fallbackColor = sf::Color(30, 30, 40);
                 break;
             }
 
-            window.draw(rect);
+            if (tex) {
+                sf::Sprite sprite(*tex);
+                sf::Vector2u texSize = tex->getSize();
+                float scaleX = tileSize / static_cast<float>(texSize.x);
+                float scaleY = tileSize / static_cast<float>(texSize.y);
+                sprite.setScale(sf::Vector2f(scaleX, scaleY));
+                sprite.setPosition(tilePos);
+                window.draw(sprite);
+            }
+            else {
+                sf::RectangleShape rect;
+                rect.setSize(sf::Vector2f(tileSize, tileSize));
+                rect.setPosition(tilePos);
+                rect.setFillColor(fallbackColor);
+                window.draw(rect);
+            }
         }
     }
 }
@@ -135,3 +157,4 @@ bool Map::isWalkableWorld(float worldx, float worldy, float tileSize) const {
     int ty = static_cast<int>(worldy) / tileSize;
     return isWalkableTileCoord(tx, ty);
 }
+

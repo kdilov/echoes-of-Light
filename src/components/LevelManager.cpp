@@ -4,20 +4,14 @@
 LevelManager::LevelManager()
     : currentLevelIndex(0)
 {
-    // 12-level default list (you can replace these names)
+    // 6-level default list (you can replace these names)
     levelFiles = {
         "resources/levels/past_1.txt",
         "resources/levels/past_2.txt",
-        "resources/levels/past_3.txt",
-        "resources/levels/past_final.txt",
         "resources/levels/present_1.txt",
         "resources/levels/present_2.txt",
-        "resources/levels/present_3.txt",
-        "resources/levels/present_final.txt",
         "resources/levels/future_1.txt",
-        "resources/levels/future_2.txt",
-        "resources/levels/future_3.txt",
-        "resources/levels/future_final.txt"
+        "resources/levels/future_2.txt"
     };
 
     // load first by default
@@ -37,7 +31,8 @@ bool LevelManager::loadLevel(const std::string& levelName) {
 }
 
 bool LevelManager::loadCurrentLevel() {
-    if (currentLevelIndex < 0 || currentLevelIndex >= static_cast<int>(levelFiles.size())) {
+    if (currentLevelIndex < 0 ||
+        currentLevelIndex >= static_cast<int>(levelFiles.size())) {
         std::cout << "LevelManager: current index out of range\n";
         return false;
     }
@@ -45,8 +40,13 @@ bool LevelManager::loadCurrentLevel() {
 }
 
 void LevelManager::nextLevel() {
-    if (currentLevelIndex < static_cast<int>(levelFiles.size())) ++currentLevelIndex;
-    if (!isLevelComplete()) loadCurrentLevel();
+    if (currentLevelIndex >= static_cast<int>(levelFiles.size()) - 1) {
+        currentLevelIndex = static_cast<int>(levelFiles.size());
+        return;
+    }
+
+    ++currentLevelIndex;
+    loadCurrentLevel();
 }
 
 bool LevelManager::isLevelComplete() const {

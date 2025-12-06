@@ -118,7 +118,8 @@ bool Game::initialize()
 
     // Calculate tile size for this level
     recalculateTileSize();
-
+    // Set textures for map rendering
+    applyWallTextureForCurrentLevel();
     
     // Initialize dialog system
     if (!dialogSystem_.initialize(gameFont_)) {
@@ -152,6 +153,7 @@ bool Game::loadResources()
 {
     std::string idlePath = findResourcePath("resources/sprites/Character_Idle.png");
     std::string movePath = findResourcePath("resources/sprites/Character_Move.png");
+    
 
     if (!idleTexture_.loadFromFile(idlePath))
     {
@@ -178,6 +180,26 @@ bool Game::loadResources()
     {
         std::cerr << "ERROR: Failed to create light node texture\n";
         return false;
+    }
+
+    
+    // Load wall textures for each era
+    std::string wallPastPath = findResourcePath("resources/sprites/PastWall.png");
+    if (!wallTexturePast_.loadFromFile(wallPastPath)) {
+        std::cerr << "WARNING: Failed to load past wall texture\n";
+        wallTexturePast_.loadFromImage(createSolidImage(16, sf::Color(80, 80, 100)));
+    }
+
+    std::string wallPresentPath = findResourcePath("resources/sprites/PresentWall.png");
+    if (!wallTexturePresent_.loadFromFile(wallPresentPath)) {
+        std::cerr << "WARNING: Failed to load present wall texture\n";
+        wallTexturePresent_.loadFromImage(createSolidImage(16, sf::Color(100, 80, 80)));
+    }
+
+    std::string wallFuturePath = findResourcePath("resources/sprites/FutureWall.png");
+    if (!wallTextureFuture_.loadFromFile(wallFuturePath)) {
+        std::cerr << "WARNING: Failed to load future wall texture\n";
+        wallTextureFuture_.loadFromImage(createSolidImage(16, sf::Color(80, 100, 100)));
     }
 
     // Load font for dialog system
@@ -599,10 +621,11 @@ void Game::update(float dt, sf::RenderWindow& window)
 
 
         // Check if player reached the exit
-        if (playerReachedExit()) {
+        if (!gameComplete_ && playerReachedExit()) {
             levels_.nextLevel();
 
             if (levels_.isLevelComplete()) {
+                gameComplete_ = true;
                 // All levels complete - show victory message
                 dialogSystem_.startDialog({
                     {"Narrator", "Congratulations! You have restored the light to all eras!"},
@@ -613,6 +636,7 @@ void Game::update(float dt, sf::RenderWindow& window)
             else {
                 // Load next level
                 recalculateTileSize();
+                applyWallTextureForCurrentLevel();
                 createEntities();
 
                 // Show level transition dialog
@@ -623,7 +647,6 @@ void Game::update(float dt, sf::RenderWindow& window)
             }
         }
     }
-
     // Light system updates regardless (for visual effects)
     lightSystem_.update(entities_, dt, window);
 }
@@ -678,6 +701,11 @@ std::string Game::findResourcePath(const std::string& relative) const
 
 
 bool Game::playerReachedExit() {
+    // Don't check if game is already complete
+    if (levels_.isLevelComplete()) {
+        return false;
+    }
+
     // Get player's world position
     auto* t = player_.getComponent<eol::TransformComponent>();
     if (!t) return false;
@@ -724,6 +752,22 @@ void Game::recalculateTileSize()
         mapOffset_.y = (GameSettings::height() - mapPixelHeight) / 2.f;
     }
 }
+
+void Game::applyWallTextureForCurrentLevel() {
+    int levelIndex = levels_.getCurrentIndex();
+
+    // Levels 0-3: Past, 4-7: Present, 8-11: Future
+    if (levelIndex < 2) {
+        levels_.getCurrentMapMutable().setWallTexture(wallTexturePast_);
+    }
+    else if (levelIndex < 4) {
+        levels_.getCurrentMapMutable().setWallTexture(wallTexturePresent_);
+    }
+    else {
+        levels_.getCurrentMapMutable().setWallTexture(wallTextureFuture_);
+    }
+}
+
 
 
 
